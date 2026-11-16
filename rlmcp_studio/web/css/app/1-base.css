@@ -1,0 +1,503 @@
+/* The studio's stylesheet, part 1 of 6: the ground rules, primitives, the chrome, the status strip,
+   the run rail, the three layouts, narrow windows, charts and not-yet panels.
+   The parts are linked in order from index.html, and a later rule wins a tie,
+   so a rule stays in its part rather than moving to one it would suit better. */
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+.app { height: 100%; display: flex; flex-direction: column; }
+
+.boot {
+  height: 100%; display: flex; align-items: center; justify-content: center;
+  gap: 10px; font-family: var(--mono); font-size: 12px; color: var(--dim);
+}
+
+/* ── primitives ──────────────────────────────────────────────────────── */
+.eyebrow {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .11em;
+  text-transform: uppercase; color: var(--dim);
+}
+.k { font-family: var(--mono); font-size: 11.5px; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto; background: var(--dim); }
+.dot.live { animation: pulse 2.4s ease-out infinite; }
+/* A card at capacity starves the browser's compositor on the same machine;
+   a box-shadow pulse asks it for a repaint sixty times a second. Still, and
+   at full colour, while `refreshGpu` says the card is that busy. */
+body.gpu-starved .dot.live, body.gpu-starved .agent-state-dot { animation: none; }
+@keyframes pulse {
+  0%   { box-shadow: 0 0 0 0 var(--pulse); }
+  70%  { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+.chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px;
+  border: 1px solid var(--line); border-radius: 100px; background: var(--raised);
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted); white-space: nowrap;
+}
+.chip.on { border-color: var(--accent-dim); color: var(--accent); background: var(--accent-soft); }
+
+button {
+  font: inherit; color: inherit; cursor: pointer; background: var(--raised);
+  border: 1px solid var(--line); border-radius: var(--r); padding: 5px 11px;
+}
+button:hover { border-color: var(--dim); }
+button:disabled { cursor: default; opacity: .5; }
+button.primary { background: var(--accent-soft); border-color: var(--accent-dim); color: var(--accent); }
+button.primary:hover { border-color: var(--accent); }
+button.ghost { background: transparent; }
+
+.act {
+  padding: 3px 11px; border-radius: 100px; background: transparent;
+  border: 1px solid var(--line); font-family: var(--mono); font-size: 11px; color: var(--muted);
+}
+.act:hover { color: var(--text); background: var(--raised); border-color: var(--dim); }
+.act small { color: var(--dim); margin-left: 5px; font-size: 10px; }
+
+/* ── app chrome: one row, shared by every layout ─────────────────────── */
+.chrome {
+  display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
+  padding: 0 12px; height: 44px;
+  background: var(--panel); border-bottom: 1px solid var(--line);
+}
+/* Controls keep their size; the task name is the one thing here that can give
+   ground. Otherwise, at 375 px the theme toggle is squeezed to *2 px* wide --
+   on screen, in the accessibility tree, and impossible to hit. */
+.chrome > * { flex: 0 0 auto; }
+.chrome .menuwrap:has(.taskbtn) { min-width: 0; flex: 0 1 auto; }
+.chrome .taskbtn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chrome .brand { font-weight: 600; letter-spacing: -.01em; font-size: 13px; }
+.chrome .brand span { color: var(--dim); font-family: var(--mono); font-size: 10px; margin-left: 7px; }
+.chrome .spacer { margin-left: auto; }
+/* What is training that you are not looking at, as a way to get there. */
+.training-else { display: inline-flex; align-items: center; gap: 6px; min-width: 0; }
+.training-else .eyebrow { color: var(--v-running); }
+.livego { display: inline-flex; align-items: center; gap: 6px; max-width: 340px;
+          border-color: var(--v-running); color: var(--v-running);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.livego .dot { flex: 0 0 auto; }
+
+.menuwrap { position: relative; display: inline-flex; }
+.menu {
+  position: absolute; top: calc(100% + 7px); right: 0; min-width: 232px; z-index: 60;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+  box-shadow: 0 12px 34px var(--shadow); overflow: hidden;
+  /* Never taller than the room it has. A tall menu opened from a bar at the
+     bottom of a short window puts its last options *below the viewport*, with
+     no page scroll to reach them: they cannot be clicked at all. */
+  max-height: min(340px, 62vh); overflow-y: auto;
+}
+/* A menu opened from a bar that lives at the bottom of the window opens
+   upward, which is the only direction with room. */
+.c-composer .menu, .f-more .menu, .statusbar .menu {
+  top: auto; bottom: calc(100% + 7px);
+}
+/* The status bar scrolls sideways when it does not fit, and a scrolling box
+   clips everything positioned inside it -- its menus would be laid out above
+   the bar, at the right coordinates, and painted nowhere: a click on the GPU
+   chip would do nothing anyone could see. `fixed` takes them out of the bar's
+   clip; with neither `left` nor `right` set they still hang from their chip
+   (the static position), and `placeBarMenus` slides one in when the window is
+   too narrow for it to hang there. 26 px is the bar's own height. */
+.statusbar .menu {
+  position: fixed; bottom: calc(26px + 7px); left: auto; right: auto;
+  /* Above the agent drawer (69/70), which below 1180 px covers the stage but
+     leaves the bar showing: a chip you can click must open something you
+     can see. Below the dialogs (80+). */
+  z-index: 75;
+}
+.menu[hidden] { display: none; }
+.menu-h { padding: 7px 11px; border-bottom: 1px solid var(--line-soft); }
+.mrow {
+  display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 9px; align-items: center;
+  width: 100%; text-align: left; padding: 8px 11px; background: none; border: 0; border-radius: 0;
+}
+.mrow:hover { background: var(--raised); }
+.mrow[aria-current="true"] { background: var(--accent-soft); }
+.mrow .mn { font-family: var(--mono); font-size: 11.5px; display: block; }
+.mrow[aria-current="true"] .mn { color: var(--accent); }
+.mrow .mr {
+  font-family: var(--mono); font-size: 9.5px; color: var(--dim); display: block;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mrow .mc { font-family: var(--mono); font-size: 9.5px; color: var(--dim); text-align: right; white-space: nowrap; }
+.mrow .mc b { color: var(--v-running); font-weight: 400; }
+
+/* the layout picker: small, and it says which layout you are in */
+.layoutbtn { display: inline-flex; align-items: baseline; gap: 6px; }
+.layoutbtn .lname { color: var(--text); }
+.layoutbtn[aria-expanded="true"] { border-color: var(--accent-dim); color: var(--accent); }
+.layoutbtn[aria-expanded="true"] .lname { color: var(--accent); }
+
+.schemes { display: flex; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 100px; overflow: hidden; }
+.schemes button {
+  border: 0; border-radius: 0; background: var(--panel); padding: 4px 11px;
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+}
+.schemes button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+
+/* ── the mount every layout renders into ─────────────────────────────── */
+.stage { flex: 1; min-height: 0; position: relative; }
+
+/* ── status strip: below everything, monochrome until it is not ──────── */
+.statusbar {
+  display: flex; align-items: center; height: 26px; flex: 0 0 auto;
+  background: var(--panel); border-top: 1px solid var(--line);
+  font-family: var(--mono); font-size: 10.5px; color: var(--dim); overflow-x: auto;
+}
+.st {
+  display: flex; align-items: center; gap: 7px; padding: 0 12px; height: 100%;
+  border-right: 1px solid var(--line-soft); white-space: nowrap;
+}
+.st:last-child { border-right: 0; }
+.st b { color: var(--muted); font-weight: 400; font-variant-numeric: tabular-nums; }
+.st.attn b { color: var(--warn); }
+.st.right { margin-left: auto; border-right: 0; border-left: 1px solid var(--line-soft); }
+
+/* ── run rail, shared by focus + workbench ───────────────────────────── */
+.rail { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 8px 6px; }
+.railhead { padding: 4px 8px 8px; display: block; }
+.railfilter {
+  width: calc(100% - 12px); margin: 0 6px 8px; padding: 4px 7px;
+  background: var(--sunken); color: var(--text);
+  border: 1px solid var(--line); border-radius: var(--r);
+  font-family: var(--mono); font-size: 10.5px;
+}
+.railfilter::placeholder { color: var(--dim); }
+.runrow {
+  display: grid; grid-template-columns: 9px minmax(0, 1fr); gap: 9px; align-items: center;
+  width: 100%; text-align: left; background: none; border: 0; border-radius: var(--r);
+  padding: 5px 8px; margin-bottom: 1px;
+}
+.runrow:hover { background: var(--raised); }
+.runrow[aria-current="true"] { background: var(--accent-soft); }
+.runrow .rid { font-family: var(--mono); font-size: 11.5px; font-weight: 600; }
+.runrow[aria-current="true"] .rid { color: var(--accent); }
+.runrow .rsl {
+  font-family: var(--mono); font-size: 10px; color: var(--dim); display: block;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* runs with no record: listed apart from the records, and clearly not one */
+.z-box.adopt { width: min(560px, 94vw); }
+.adopt-what {
+  display: grid; gap: 1px; background: var(--line-soft); border-radius: var(--r);
+  overflow: hidden; margin-bottom: 10px;
+}
+.adopt-what .kv { background: var(--panel); padding: 6px 10px; }
+.adopt-why { margin: 0 0 12px; font-size: 12px; color: var(--muted); }
+
+/* ── console ─────────────────────────────────────────────────────────── */
+.console { display: flex; flex-direction: column; height: 100%; }
+.c-top { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.c-top .id { font-family: var(--mono); font-size: 14px; font-weight: 600; letter-spacing: -.02em; }
+.c-top .slug { font-family: var(--mono); font-size: 11.5px; color: var(--muted); }
+.c-stream { flex: 1; overflow-y: auto; padding: 16px 0 8px; }
+.c-inner { max-width: 780px; margin: 0 auto; padding: 0 20px; }
+
+.e { display: grid; grid-template-columns: 62px minmax(0, 1fr); gap: 12px; padding: 7px 0; }
+.e-t { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 10px; color: var(--dim); text-align: right; padding-top: 3px; }
+.e-b { min-width: 0; }
+.e-who { font-family: var(--mono); font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); margin-bottom: 4px; }
+
+.block { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); overflow: hidden; }
+.block-b { padding: 9px 10px; }
+.kv { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; padding: 2px 0; }
+.kv span:last-child { font-variant-numeric: tabular-nums; }
+
+.c-composer { border-top: 1px solid var(--line); background: var(--panel); padding: 11px 0; }
+.c-comp-inner { max-width: 780px; margin: 0 auto; padding: 0 20px; }
+.acts { display: flex; align-items: center; gap: 6px; margin-bottom: 9px; flex-wrap: wrap; }
+.acts .div { width: 1px; height: 14px; background: var(--line); margin: 0 3px; }
+.scope {
+  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 100px;
+  background: transparent; border: 1px dashed var(--line);
+  font-family: var(--mono); font-size: 11px; color: var(--dim);
+}
+.scope:hover { border-style: solid; border-color: var(--accent-dim); color: var(--accent); }
+.scope b { color: var(--muted); font-weight: 400; }
+/* open, it is a menu of whatever criteria the run publishes */
+.scope[aria-expanded="true"] { border-style: solid; border-color: var(--accent-dim); color: var(--accent); }
+.scope[aria-expanded="true"] b { color: var(--accent); }
+.scopemenu { min-width: 244px; max-height: 340px; overflow-y: auto; }
+.scopemenu .menu-h { display: flex; align-items: baseline; gap: 8px; }
+.scopemenu .menu-h .mr { margin-left: auto; white-space: nowrap; }
+.scopemenu .notyet { margin: 8px 10px; font-size: 11.5px; }
+/* Holds the agent's own composer -- see `console.js`. The frame belongs to
+   the textarea inside it. */
+.c-input { display: block; }
+/* The transcript in the stream: it scrolls with the page, not inside itself. */
+.c-agent .agent-b { overflow: visible; padding: 0; max-height: none; }
+.c-input .agent-c { border-top: 0; padding: 0; }
+.c-input .agent-input { width: 100%; }
+.c-hints { display: flex; gap: 14px; margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--dim); flex-wrap: wrap; }
+.c-hints b { color: var(--muted); font-weight: 400; }
+
+/* ── focus ───────────────────────────────────────────────────────────── */
+/* minmax(0,1fr) rows, not auto: an auto row sizes to its content, so a long
+   file makes the pane 26000px tall instead of scrolling inside the stage. */
+.focus { display: grid; grid-template-columns: 208px minmax(0, 1fr);
+         grid-template-rows: minmax(0, 1fr); height: 100%; }
+/* Beside the layout it modifies, and *above* the media queries: below them, at
+   equal specificity, it would win unconditionally and Focus would never
+   collapse. At 375 px that is 528 px of fixed track in a 375 px viewport and
+   a centre column of exactly 0 -- the whole stage gone. */
+.focus.with-agent { grid-template-columns: 208px minmax(0, 1fr) 320px; }
+.f-main { display: flex; flex-direction: column; min-width: 0; }
+.f-head { padding: 14px 20px 0; }
+.f-title { display: flex; align-items: baseline; gap: 11px; flex-wrap: wrap; }
+.f-title h2 { margin: 0; font-size: 19px; letter-spacing: -.02em; font-weight: 600; }
+.f-title .id { font-family: var(--mono); font-size: 19px; color: var(--dim); font-weight: 600; }
+.f-sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.f-body { flex: 1; overflow-y: auto; padding: 14px 20px 18px; display: grid; grid-template-columns: minmax(0, 1fr) var(--side, 216px); gap: 18px; align-items: start; }
+.f-side { display: flex; flex-direction: column; gap: 11px; }
+.f-stat .l { font-family: var(--mono); font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); }
+.f-stat .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 19px; letter-spacing: -.02em; line-height: 1.15; margin-top: 1px; }
+.f-stat .v small { font-size: 11px; color: var(--dim); margin-left: 3px; }
+.f-stat .s { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 1px; }
+.f-acts { margin-top: 2px; padding-top: 11px; border-top: 1px solid var(--line-soft); display: flex; flex-direction: column; gap: 6px; }
+.verb {
+  display: flex; align-items: center; gap: 9px; width: 100%;
+  padding: 7px 11px; border-radius: var(--r);
+  background: var(--raised); border: 1px solid var(--line); font-size: 12.5px; color: var(--text);
+}
+.verb:hover { border-color: var(--accent-dim); background: var(--accent-soft); color: var(--accent); }
+.verb svg { flex: 0 0 auto; display: block; opacity: .75; }
+.verb:hover svg { opacity: 1; }
+.verb small { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.f-more { display: flex; align-items: center; gap: 6px; padding: 0 20px 12px; flex-wrap: wrap; }
+.f-more .lbl { font-family: var(--mono); font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--dim); margin-right: 4px; }
+
+/* ── workbench ───────────────────────────────────────────────────────── */
+.bench { display: grid; grid-template-columns: 198px minmax(0, 1fr) 312px;
+         grid-template-rows: minmax(0, 1fr); height: 100%; }
+.bench.noagent { grid-template-columns: 198px minmax(0, 1fr); }
+.agentbtn.on { border-color: var(--accent-dim); color: var(--accent); }
+.agentbtn .attn { color: var(--warn); margin-left: 4px; }
+.b-stage { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.b-tabs { display: flex; gap: 1px; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.b-tab { background: none; border: 0; border-bottom: 2px solid transparent; border-radius: 0; padding: 8px 11px; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.b-tab:hover { color: var(--text); }
+.b-tab[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+/* `grid-auto-rows: max-content` and `align-content: start` are load-bearing.
+   Every `.card` is `overflow: hidden`, which makes its automatic *minimum*
+   size zero -- so auto rows are free to shrink under their content, and two
+   cards end up painted over each other. Because every track then "fits", the
+   grid reports no overflow and there is no scrollbar to recover the hidden
+   half with. Rows are sized by their content, and the panel scrolls when they
+   do not fit. */
+.b-scroll { flex: 1; overflow-y: auto; padding: 12px; display: grid;
+            grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+            grid-auto-rows: max-content; align-content: start;
+            gap: 12px; align-items: start; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.card-h { display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-bottom: 1px solid var(--line-soft); }
+.card-h h3 { margin: 0; font-size: 11.5px; font-weight: 600; }
+.card-h .sp { margin-left: auto; }
+.card-b { padding: 10px; }
+.agentcol { background: var(--panel); border-left: 1px solid var(--line); display: flex; flex-direction: column; }
+.agent-h { display: flex; align-items: center; gap: 7px; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+.agent-b { flex: 1; overflow-y: auto; padding: 12px; }
+.agent-c { border-top: 1px solid var(--line); padding: 10px 12px; }
+
+/* ── narrow windows ──────────────────────────────────────────────────── */
+/*
+   Without these steps the three-column layouts do not collapse. At 768 px the
+   centre column is ~130 px wide -- a frame cut off, metric labels truncated
+   to "Train/mean_rew…" -- and the agent column sits *on top of* the view tabs,
+   so they cannot be clicked. At 375 px the whole content column is
+   off-screen.
+
+   Three steps down, and the principle at each: never hide the thing you came
+   for. The stage keeps its width; the rail and the agent become drawers.
+*/
+.drawer-scrim { display: none; }
+
+@media (max-width: 1180px) {
+  .bench, .bench.noagent { grid-template-columns: 168px minmax(0, 1fr); }
+  /* The drawer is over the app here, so it is dismissable the way anything
+     over the app has to be: click beside it, or press Escape. Without this the
+     tabs under it are simply gone until the window gets wider. */
+  .drawer-scrim {
+    display: block; position: fixed; inset: 44px 0 26px 0; z-index: 69;
+    background: var(--scrim, rgba(0, 0, 0, .28));
+  }
+  .bench .agentcol, .focus .f-drawer {
+    position: fixed; top: 44px; right: 0; bottom: 26px; width: min(360px, 86vw);
+    z-index: 70; box-shadow: -16px 0 40px var(--shadow);
+  }
+  .focus, .focus.with-agent { grid-template-columns: 168px minmax(0, 1fr); }
+  /* The agent is a drawer of fixed width here: nothing to drag. */
+  .bench > .divider.right, .focus > .divider.right { display: none; }
+  .b-scroll { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (max-width: 900px) {
+  /* See `statusbar`: keep the verdict and the trainer's state on screen. */
+  .statusbar .sst { display: none; }
+}
+
+@media (max-width: 760px) {
+  /* The rail becomes a strip of ids: which run you are on still has to be
+     visible and switchable, and a hidden rail is a lost app. */
+  .bench, .bench.noagent, .focus, .focus.with-agent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .rail {
+    position: fixed; left: 0; right: 0; top: 44px; z-index: 60;
+    display: flex; gap: 6px; overflow-x: auto; padding: 6px 8px;
+    border-right: 0; border-bottom: 1px solid var(--line);
+  }
+  .rail .railhead, .rail .convs { display: none; }
+  .runrow { width: auto; flex: 0 0 auto; }
+  .runrow .rsl { display: none; }
+  .b-stage { padding-top: 40px; }
+  .b-tabs { overflow-x: auto; }
+  .chrome { gap: 6px; padding: 0 8px; }
+  /* What a narrow chrome gives up, in order of what you can do without: the
+     product name, the word on the connection chip, the layout picker's
+     subtitle. The theme toggle *stays* -- hiding it leaves no way to change
+     theme at all on a phone, and this app is read for hours, which is the
+     whole argument for having two. And the task name keeps enough width to
+     name the task. */
+  .chrome .brand { display: none; }
+  .chrome .conn { font-size: 0; padding: 5px; border-radius: 100px; }
+  .layoutbtn small { display: none; }
+  .chrome .schemes button { padding: 3px 7px; font-size: 10px; }
+  .chrome .taskbtn { min-width: 92px; }
+  .z-box { padding: 10px; }
+  .z-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* A tab bar that cannot be reached is a view that does not exist. */
+.b-tabs { overflow-x: auto; scrollbar-width: thin; }
+.b-tabs::-webkit-scrollbar { height: 4px; }
+
+/* ── charts ──────────────────────────────────────────────────────────── */
+.chart svg { display: block; width: 100%; height: auto; }
+.chart-h { display: flex; align-items: baseline; gap: 8px; padding: 0 0 6px; }
+.chart-h .k { color: var(--muted); }
+.chart-h .now { margin-left: auto; font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 13px; }
+
+/* A chart with axes keeps its numbers *outside* the SVG. The viewBox is
+   stretched to the card's width (`preserveAspectRatio="none"`), so a `<text>`
+   inside it is pulled sideways with the curve, and the numbers read as
+   smeared. These are HTML in two gutters, placed
+   by percentage, so a digit is a digit at any width. The two 44px must match:
+   the plot's left padding and the x-row's left margin are the same gutter. */
+.chart-axed .ch-plot { position: relative; padding-left: 44px; }
+.chart-axed .ch-y { position: absolute; left: 0; top: 0; width: 38px; height: 100%; }
+.chart-axed .ch-x { position: relative; height: 13px; margin-left: 44px; }
+.chart-axed .ch-y span, .chart-axed .ch-x span {
+  position: absolute; font-family: var(--mono); font-size: 9.5px; line-height: 1;
+  color: var(--dim); font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.chart-axed .ch-y span { right: 0; transform: translateY(-50%); text-align: right; }
+.chart-axed .ch-x span { top: 3px; transform: translateX(-50%); }
+
+/* ── not-yet-built, said honestly ────────────────────────────────────── */
+.notyet {
+  padding: 14px; border: 1px dashed var(--line); border-radius: var(--r);
+  background: var(--panel); color: var(--muted); font-size: 12px;
+}
+.notyet b { color: var(--text); font-weight: 600; display: block; margin-bottom: 3px; }
+.notyet code { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+
+.empty { padding: 26px; text-align: center; color: var(--dim); font-size: 12.5px; }
+
+/* story */
+.stories { display: grid; grid-template-columns: repeat(auto-fill, minmax(244px, 1fr)); gap: 10px; align-items: start; }
+.story {
+  display: block; padding: 0; overflow: hidden; text-align: left; width: 100%;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r);
+}
+.story:hover { border-color: var(--dim); }
+.story[aria-current="true"] { border-color: var(--accent-dim); }
+.story .stripe { height: 2px; display: block; }
+.story-b { display: block; padding: 9px 11px; }
+.story-top { display: flex; align-items: center; gap: 7px; }
+.story-id { font-family: var(--mono); font-size: 11.5px; font-weight: 600; }
+.story-slug { font-family: var(--mono); font-size: 10px; color: var(--dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.story-line { display: block; font-size: 12px; margin-top: 5px; line-height: 1.45; }
+.story-meta { display: block; font-family: var(--mono); font-size: 9.5px; color: var(--dim); margin-top: 6px; }
+
+/* tree */
+/* The claims panel takes its width from `--side` (resize.js): dragged, saved,
+   and by default a share of the window rather than a fixed 300px, which turns
+   a hypothesis into forty lines of four words. */
+.treewrap { display: grid; grid-template-columns: minmax(0, 1fr) var(--side, 300px); gap: 18px; align-items: start; }
+@media (max-width: 980px) {
+  .treewrap { grid-template-columns: minmax(0, 1fr); }
+  .treewrap > .divider { display: none; }
+}
+.treesvg { overflow-x: auto; cursor: pointer; }
+.treesvg svg { display: block; height: auto; }
+.legend2 { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.legend2 span { display: flex; align-items: center; gap: 6px; }
+.detail { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+.detail dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 12px; margin: 0; }
+.detail dt {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--dim); padding-top: 2px;
+}
+.detail dd { margin: 0; font-size: 12px; }
+.recipe-step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 9px; padding: 3px 0; }
+.recipe-step .rs-id { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.recipe-step .rs-c { font-size: 11.5px; color: var(--muted); }
+
+/* parameters over iterations */
+.paramview { display: grid; grid-template-columns: var(--side, 268px) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) {
+  .paramview { grid-template-columns: minmax(0, 1fr); }
+  .paramview > .divider { display: none; }
+}
+.plist { display: flex; flex-direction: column; gap: 4px; }
+.pitem { text-align: left; width: 100%; padding: 7px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); }
+.pitem:hover { border-color: var(--dim); }
+.pitem[aria-current="true"] { border-color: var(--accent-dim); background: var(--accent-soft); }
+.pitem .pk { display: block; font-family: var(--mono); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pitem[aria-current="true"] .pk { color: var(--accent); }
+.pitem .pm { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
+.plot { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; }
+.plot svg { display: block; width: 100%; height: auto; }
+.plot-h { display: flex; align-items: baseline; gap: 10px; margin-bottom: 9px; }
+.changes { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 10px; display: flex; flex-direction: column; gap: 7px; }
+.chg-row { display: grid; grid-template-columns: 68px minmax(0, 1fr); gap: 11px; align-items: baseline; }
+.chg-row .it { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 10.5px; color: var(--dim); text-align: right; }
+.chg-row .wh { font-size: 12px; }
+.chg-row .wh em { font-style: normal; font-family: var(--mono); color: var(--accent); }
+.chg-row .by { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+
+/* console hints become real entry points */
+.hint { background: none; border: 0; border-radius: 0; padding: 0; font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.hint:hover { color: var(--text); }
+.hint b { color: var(--muted); font-weight: 400; }
+.hint:hover b { color: var(--accent); }
+
+/* the agent panel, wherever it is put */
+.agentwrap { display: flex; flex-direction: column; height: 100%; min-height: 0; }
+.agentcol { background: var(--panel); border-left: 1px solid var(--line); min-width: 0; min-height: 0; }
+.f-drawer { background: var(--panel); border-left: 1px solid var(--line);
+            min-width: 0; min-height: 0; overflow: hidden; }
+.f-more button[aria-pressed="true"] { border-color: var(--accent-dim); background: var(--accent-soft); color: var(--accent); }

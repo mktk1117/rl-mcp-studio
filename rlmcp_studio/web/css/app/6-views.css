@@ -1,0 +1,516 @@
+/* The studio's stylesheet, part 6 of 6: the library, the overview, the verification suite, the
+   provider menu, the install card, headline metrics and the report.
+   The parts are linked in order from index.html, and a later rule wins a tie,
+   so a rule stays in its part rather than moving to one it would suit better. */
+
+/* ── library: the task's card, and the shelf it stands on ────────────────
+   The same two-pane frame as Docs, deliberately: a shelf on the left and the
+   thing you picked on the right is the shape this app already uses for "many
+   of these, one of them open". The card is a *document* rather than a panel,
+   so it sits on the paper set — the token set that means the same thing in
+   both schemes, unlike `--raised`, which flips sides. */
+.libview { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+/* The shelf is a fixed 288px only when there is room for it. In Workbench with
+   the agent panel open the stage is about 500px, and a fixed shelf leaves the
+   card 200 -- a title wraps over two lines and a records path breaks
+   mid-word. The thing you picked is what you came to read, so the shelf is
+   the half that gives way. */
+.lib { display: grid; grid-template-columns: var(--side, clamp(150px, 32%, 288px)) minmax(0, 1fr);
+       flex: 1;
+       min-height: 0; border: 1px solid var(--line); border-radius: var(--r);
+       overflow: hidden; }
+.liblist { background: var(--paper-rail); border-right: 1px solid var(--line);
+           display: flex; flex-direction: column; min-height: 0;
+           overflow: auto; padding: 8px; gap: 2px; }
+.lib-row { display: flex; flex-direction: column; align-items: flex-start;
+           gap: 2px; width: 100%; text-align: left; background: none; border: 0;
+           border-radius: var(--r); padding: 6px 8px; color: var(--muted); }
+.lib-row:hover { background: var(--raised); color: var(--text); }
+.lib-row.on { background: var(--accent-soft); color: var(--accent); }
+/* Where Enter would take you, which is a different question from which task
+   is open -- so it is an outline rather than a fill, and a row that is both
+   can say both. Inset, because a real border would move every row by a pixel
+   the moment the keyboard touched the shelf. */
+.lib-row.picked { box-shadow: inset 0 0 0 1px var(--accent-dim); color: var(--text); }
+.lib-name { display: flex; align-items: center; gap: 6px; font-size: 11.5px;
+            overflow-wrap: anywhere; }
+/* Wraps as whole facts. A shelf 150px wide would break an "edited <date>"
+   count across two lines mid-date, which reads as two dates and neither of
+   them one. */
+.lib-counts { display: flex; flex-wrap: wrap; gap: 1px 8px; padding-left: 14px;
+              font-size: 10px; color: var(--dim); }
+.lib-counts small { white-space: nowrap; }
+.lib-f { color: var(--v-validated); }
+.lib-p { color: var(--v-falsified); }
+.lib-e { color: var(--dim); }
+/* The shelf's filter wears the run rail's box: it is the same control asked of
+   a different list, and a second style for it would say otherwise. Sticky,
+   because the shelf scrolls and a filter you have to scroll back up to reach
+   is one you clear by reloading the page. */
+.libfilter { position: sticky; top: 0; z-index: 1; width: 100%; margin: 0 0 6px; }
+/* Why a row survived what you typed. `<i>` for the run of characters the
+   query matched, unstyled by its tag and coloured here. */
+.lib-hit { font-style: normal; color: var(--accent); }
+.lib-row.on .lib-hit { color: var(--text); }
+
+.libcard { min-width: 0; min-height: 0; overflow: auto; background: var(--paper);
+           padding: 18px 22px 60px; display: flex; flex-direction: column;
+           gap: 16px; }
+.libcard-h { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.libcard-h h2 { margin: 0; font-size: 17px; }
+.lib-blurb { margin: 0; color: var(--muted); font-size: 12.5px; line-height: 1.6;
+             max-width: 74ch; }
+.lib-id { display: flex; flex-wrap: wrap; gap: 4px 20px; margin: 0;
+          font-size: 11px; }
+.lib-id div { display: flex; gap: 6px; align-items: baseline; }
+.lib-id dt { color: var(--dim); text-transform: uppercase; letter-spacing: .06em;
+             font-size: 10px; }
+/* `overflow-wrap: anywhere` breaks `/home/you/tasks/...` as "ta sks".
+   A path has joints; clipping it and keeping the whole of it in the tooltip
+   reads better than breaking a word that is not a word. */
+.lib-id dd { margin: 0; color: var(--text); font-family: var(--mono);
+             font-size: 11px; min-width: 0; overflow: hidden;
+             text-overflow: ellipsis; white-space: nowrap; }
+.lib-id div { min-width: 0; max-width: 100%; }
+.lib-verdicts { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.lib-v { display: flex; align-items: center; gap: 5px; color: var(--muted);
+         font-size: 11px; }
+
+.lib-sec { display: flex; flex-direction: column; gap: 8px; }
+.lib-sec-h { display: flex; align-items: baseline; gap: 9px; }
+.lib-sec-h h3 { margin: 0; font-size: 12.5px; }
+.lib-sec-h small { color: var(--dim); font-size: 11px; }
+.lib-sec-h .sp { margin-left: auto; }
+.lib-entries { display: flex; flex-direction: column; gap: 8px; }
+/* Every entry carries its citation, so the entry is the box: a claim and the
+   run behind it must not be separable by a scroll. */
+.lib-entry { background: var(--paper-block); border: 1px solid var(--line-soft);
+             border-radius: var(--r); padding: 9px 11px; display: flex;
+             flex-direction: column; gap: 6px; max-width: 88ch; }
+.lib-text { color: var(--text); font-size: 12.5px; line-height: 1.55; }
+.lib-stance, .lib-kind { display: inline-block; margin-right: 7px;
+                         font-size: 9.5px; text-transform: uppercase;
+                         letter-spacing: .06em; padding: 1px 5px;
+                         border-radius: var(--r); border: 1px solid var(--line);
+                         color: var(--dim); vertical-align: 1px; }
+.lib-stance.in { color: var(--v-validated); border-color: var(--v-validated); }
+.lib-stance.out { color: var(--v-falsified); border-color: var(--v-falsified); }
+.lib-change { display: flex; flex-direction: column; gap: 3px;
+              padding-left: 9px; border-left: 2px solid var(--line); }
+.lib-chg { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.lib-cite { display: flex; align-items: center; gap: 7px; align-self: flex-start;
+            background: none; border: 0; padding: 2px 0; color: var(--muted);
+            font-family: var(--mono); font-size: 10.5px; }
+.lib-cite:hover { color: var(--accent); }
+.lib-empty { color: var(--dim); font-size: 11.5px; line-height: 1.55;
+             max-width: 74ch; }
+.lib-docs { display: flex; flex-wrap: wrap; gap: 6px; }
+.lib-doc { display: flex; flex-direction: column; align-items: flex-start;
+           gap: 1px; background: var(--paper-block); border: 1px solid var(--line-soft);
+           border-radius: var(--r); padding: 6px 9px; color: var(--muted);
+           text-align: left; max-width: 34ch; }
+.lib-doc:hover { border-color: var(--accent-dim); color: var(--text); }
+.lib-doc b { font-family: var(--mono); font-size: 11px; font-weight: 400;
+             color: var(--text); }
+.lib-doc small { font-size: 10.5px; overflow-wrap: anywhere; }
+.lib-clip { width: 100%; max-width: 520px; border-radius: var(--r);
+            background: var(--sunken); }
+.lib-note { margin-top: auto; padding-top: 10px; border-top: 1px solid var(--line-soft);
+            color: var(--dim); font-size: 11px; line-height: 1.55; max-width: 74ch; }
+.lib-note b { display: block; color: var(--muted); font-size: 11.5px; }
+/* the recipe fold
+   Cards on the app's own `.card` shell, and the value rows on `.dline`, which
+   is the same component the Diff view's key list uses: a recipe row and a diff
+   row state the same kind of fact and must not look like two ideas. */
+.recipeview { display: flex; flex-direction: column; gap: 12px; }
+.rcp-line { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap;
+            font-size: 13px; line-height: 1.5; }
+.rcp-line b { font-family: var(--mono); font-size: 13px; }
+.rcp-eq { color: var(--dim); }
+.rcp-by { font-family: var(--mono); font-size: 9.5px; color: var(--dim);
+          margin-left: 8px; }
+/* The old value is where the journey started, not something struck out, which
+   is why these are not `.dv .old` / `.dv .new`. */
+.rcp-was { color: var(--dim); }
+.rcp-arrow { color: var(--dim); margin: 0 6px; }
+.rcp-now { color: var(--accent); }
+.dline.removed .rcp-now { color: var(--dim); }
+.rcp-full { display: block; font-size: 9.5px; color: var(--dim);
+            overflow-wrap: anywhere; }
+.rcp-fold { margin-top: 9px; }
+.rcp-fold > summary { cursor: pointer; font-size: 11px; color: var(--muted); }
+.rcp-fold > summary:hover { color: var(--text); }
+.rcp-intro, .rcp-files { margin-top: 6px; }
+.rcp-note { font-size: 11px; color: var(--dim); line-height: 1.5; margin-top: 8px; }
+
+.rcp-phase { display: flex; align-items: baseline; gap: 8px; padding: 4px 0;
+             border-bottom: 1px solid var(--line-soft); flex-wrap: wrap; }
+.rcp-phase:last-child { border-bottom: 0; }
+.rcp-run { font-family: var(--mono); font-size: 11.5px; }
+.rcp-slug { font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+.rcp-cost { font-family: var(--mono); font-size: 10px; color: var(--dim);
+            font-variant-numeric: tabular-nums; }
+.rcp-src { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.rcp-cut { margin-top: 10px; padding: 8px 10px; border-radius: var(--r);
+           background: var(--accent-soft); font-size: 11.5px; line-height: 1.5; }
+.rcp-cut b { font-family: var(--mono); }
+
+.rcp-stage { display: grid; grid-template-columns: 92px minmax(0, 1fr);
+             gap: 11px; padding: 5px 0; align-items: baseline;
+             border-bottom: 1px solid var(--line-soft); }
+.rcp-stage-n { font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
+.rcp-stage-p { display: flex; gap: 8px; flex-wrap: wrap; }
+.rcp-set { font-family: var(--mono); font-size: 11px; }
+.rcp-set b { font-weight: 500; color: var(--accent); }
+.rcp-why { display: block; font-size: 11px; color: var(--muted);
+           line-height: 1.5; margin-top: 3px; }
+
+.rcp-step { display: flex; width: 100%; text-align: left; gap: 9px;
+            padding: 6px 8px; background: none; border: 1px solid transparent;
+            border-radius: var(--r); }
+.rcp-step:hover { border-color: var(--line); }
+.rcp-step[aria-current="true"] { border-color: var(--accent-dim);
+                                 background: var(--accent-soft); }
+.rcp-step .stripe { width: 3px; border-radius: 2px; flex: none; }
+.rcp-step-b { display: block; min-width: 0; flex: 1; }
+.rcp-step-h { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.rcp-step-l { display: block; font-size: 11.5px; margin-top: 2px;
+              overflow-wrap: anywhere; }
+.rcp-said { display: block; font-size: 11px; color: var(--dim);
+            margin-top: 3px; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; }
+
+/* ── overview: what the task is, beside what was measured ────────────────
+   The document gets the room and the measurements get a rail, which is the
+   same split as Docs and Library and for the same reason: prose read in a
+   200px column is not read. The rail is on the *right* here, unlike those
+   two, because it is not an index you pick from — it is the evidence beside
+   the paragraph, and the paragraph is what you came for. */
+/* Sized against its own width, not the window's. Every other collapse in this
+   file is a `@media`, which is right for a panel that spans the app and wrong
+   here: the stage is ~480px wide in Workbench on a 1600px screen, so a window
+   query keeps the rail beside the document at a width where a single task
+   name wraps into several lines. */
+/* A grid, so the panel inside stretches: `height: 100%` on a block child of a
+   parent with no definite height computes to auto, and the whole view draws
+   at the height of its own text with empty ground under it. */
+.ovwrap { display: grid; grid-template-rows: minmax(0, 1fr); height: 100%;
+          min-height: 0; container-type: inline-size; }
+.overview { display: grid; grid-template-columns: minmax(0, 1fr);
+            /* Stacked, the rail is a *row*, and it has to be bounded: an auto
+               row sized to its content pushes itself off the bottom of a pane
+               that does not scroll, which is a rail nobody can reach. */
+            grid-template-rows: minmax(0, 1fr) minmax(0, 45%);
+            gap: 0; height: 100%; min-height: 0;
+            border: 1px solid var(--line); border-radius: var(--r);
+            overflow: hidden; }
+.ovpane { display: flex; flex-direction: column; min-width: 0; min-height: 0;
+          overflow: hidden; background: var(--paper); }
+.ovhead { display: flex; align-items: center; gap: 9px; padding: 8px 12px;
+          background: var(--panel); border-bottom: 1px solid var(--line);
+          flex: 0 0 auto; flex-wrap: wrap; }
+.ovwarn { margin: 8px 12px 0; flex: 0 0 auto; }
+.ovhead .fp { font-family: var(--mono); font-size: 11.5px;
+              overflow-wrap: anywhere; }
+.act.primary { border-color: var(--accent-dim); color: var(--accent);
+               background: var(--accent-soft); }
+.act.primary:hover { border-color: var(--accent); color: var(--accent); }
+.act[disabled] { opacity: .5; cursor: not-allowed; }
+
+.ovempty { max-width: 74ch; margin: 0 auto; padding: 30px 30px 60px;
+           display: flex; flex-direction: column; gap: 12px;
+           overflow: auto; }
+/* A flex column shrinks its children before it scrolls, which cuts the section
+   table off mid-row and leaves the note sitting under the wound. Nothing here
+   shrinks; the column scrolls. */
+.ovempty > * { flex: none; }
+.ovempty b { font-size: 16px; }
+.ovempty p { font-size: 13px; line-height: 1.65; color: var(--muted); margin: 0; }
+.ovempty code { font-family: var(--mono); font-size: 11.5px; color: var(--text); }
+.ovsections { display: grid; gap: 1px; background: var(--line-soft);
+              border: 1px solid var(--line); border-radius: var(--r);
+              overflow: hidden; }
+.ovsection { display: grid; grid-template-columns: 12ch minmax(0, 1fr);
+             gap: 12px; padding: 7px 10px; background: var(--paper);
+             align-items: baseline; }
+.ovsection b { font-size: 11.5px; font-weight: 600; }
+.ovsection small { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.ovnote { width: 100%; resize: vertical; font: inherit; font-size: 12px;
+          padding: 7px 9px; border-radius: var(--r);
+          border: 1px solid var(--line); background: var(--paper-block);
+          color: var(--text); }
+
+.ovrail { background: var(--paper-rail); border-left: 1px solid var(--line);
+          display: flex; flex-direction: column; min-height: 0;
+          overflow: auto; padding: 8px 10px 20px; gap: 4px; }
+/* Nothing in the rail shrinks; the rail scrolls. A flex column shrinks its
+   children before it scrolls, which cuts a term list off mid-row and leaves
+   rail ground below it — the same trap as the empty state above. */
+.ovrail > * { flex: none; }
+.ovrail-h { display: flex; align-items: baseline; gap: 8px; padding: 12px 2px 4px;
+            font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+            color: var(--dim); }
+.ovrail-h b { color: var(--text); font-weight: 600; }
+.ovrail-h small { text-transform: none; letter-spacing: 0; color: var(--dim);
+                  margin-left: auto; }
+.ovfacts, .ovterms, .ovmedia { display: flex; flex-direction: column; }
+.ovfact { display: grid; grid-template-columns: 11ch minmax(0, 1fr); gap: 8px;
+          padding: 4px 2px; border-bottom: 1px solid var(--line-soft);
+          align-items: baseline; }
+.ovfact .k { font-size: 11px; color: var(--muted); overflow-wrap: anywhere; }
+.ovfact .v { font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere;
+             font-variant-numeric: tabular-nums; }
+/* "measured" beside a number is the whole point of the rail: it says this one
+   was taken off a running environment rather than written by anybody. */
+.ovfact .v .src { font-family: var(--sans); font-style: normal; font-size: 9.5px;
+                  text-transform: uppercase; letter-spacing: .05em;
+                  color: var(--dim); margin-left: 6px; }
+.ovhint { margin-top: 12px; padding: 9px 10px; border-radius: var(--r);
+          background: var(--paper-block); border: 1px solid var(--line-soft);
+          display: flex; flex-direction: column; gap: 4px; }
+.ovhint b { font-size: 11.5px; }
+/* A hint that is a caution: two tasks writing to one directory. Same block,
+   marked, because it sits in a rail of neutral facts and has to read as the
+   one line that is not one. */
+.ovshared { border-color: var(--edge-warn); background: var(--wash-warn); }
+.ovshared b { color: var(--warn); }
+.ovhint p { margin: 0; font-size: 11px; line-height: 1.55; color: var(--muted); }
+.ovmedia-i { display: grid; grid-template-columns: 5ch minmax(0, 1fr); gap: 8px;
+             padding: 4px 2px; align-items: baseline; text-decoration: none;
+             border-bottom: 1px solid var(--line-soft); }
+.ovmedia-i .k { font-size: 9.5px; text-transform: uppercase; color: var(--dim); }
+.ovmedia-i .v { font-family: var(--mono); font-size: 11px; color: var(--text);
+                overflow-wrap: anywhere; }
+
+/* A clip written into a document with image syntax, which is the only syntax
+   markdown has for one. Same box as `.md-img`. */
+.prose .md-video { max-width: 100%; margin: 4px 0; border: 1px solid var(--line-soft);
+                   border-radius: var(--r); display: block; background: #000; }
+
+/* Stacked is the default, so a narrow pane needs no rule of its own: the rail
+   sits under the document with its own scroll. Its height is the grid row's
+   (`minmax(0, 45%)`) and is not repeated as a `max-height` here — that would
+   apply in the side-by-side case too, and cut the rail to 45% of a column it
+   is supposed to fill.
+
+   The container query comes last on purpose: it and the rules above have the
+   same specificity, so source order is what decides, and written above them it
+   would lose every declaration it repeats. */
+.ovrail { border-left: none; border-top: 1px solid var(--line); }
+.overview > .divider { display: none; }
+
+@container (min-width: 700px) {
+  .overview { grid-template-columns: minmax(0, 1fr) var(--side, clamp(200px, 28%, 320px));
+              grid-template-rows: minmax(0, 1fr); }
+  .ovrail { border-left: 1px solid var(--line); border-top: none; }
+  .overview > .divider { display: block; }
+}
+
+/* Whether the report accounts for every term the check named. Green is not a
+   decoration here: "all 14 named" and "3 of 14 are not in the report" are the
+   two answers this panel exists to give, and they must not look alike. */
+.ovcover { display: flex; flex-direction: column; gap: 3px; padding: 7px 9px;
+           margin-top: 6px; border-radius: var(--r); font-size: 11px;
+           border: 1px solid var(--edge-warn); background: var(--wash-warn);
+           color: var(--warn); }
+.ovcover b { font-size: 11px; font-weight: 600; }
+.ovcover span { font-family: var(--mono); color: var(--text);
+                overflow-wrap: anywhere; }
+.ovcover small { color: var(--dim); }
+.ovcover.ok { border-color: var(--line-soft); background: var(--paper-block);
+              color: var(--muted); }
+
+/* ── Build: the verification suite ──────────────────────────────────────
+   A second strip under the gates, and a card of evidence in the side column.
+   Two surfaces rather than one for the reason the gates already have two: the
+   verdict is the state of the whole view and has to be readable from whichever
+   pane you were in, and the frames are the evidence, which needs room. */
+.verify-strip .verify-tag {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--dim); padding-right: 2px;
+}
+.gate.warn { border-color: var(--edge-warn); background: var(--wash-warn); color: var(--warn); }
+.gate.warn .tick { color: var(--warn); }
+.gate.running .tick { color: var(--accent); }
+.gate.running { opacity: .8; }
+.gate.skip { opacity: .5; }
+
+.verify-b { display: grid; gap: 8px; padding: 9px 10px; }
+.v-step { display: grid; gap: 3px; }
+.v-head { display: flex; align-items: baseline; gap: 6px; font-size: 12px; }
+.v-head b { font-weight: 500; color: var(--text); }
+.v-head .tick { font-family: var(--mono); font-size: 11px; color: var(--dim); }
+.v-step.pass .tick { color: var(--ok); }
+.v-step.warn .tick { color: var(--warn); }
+.v-step.fail .tick { color: var(--bad); }
+.v-says { font-family: var(--mono); font-size: 10px; color: var(--dim);
+          font-variant-numeric: tabular-nums; text-align: right; }
+.v-detail { margin: 0; font-size: 11.5px; line-height: 1.5; color: var(--muted); }
+.v-step.warn .v-detail { color: var(--warn); }
+.v-step.fail .v-detail { color: var(--bad); }
+
+/* The frames. Thumbnails are a prompt to look, not the looking -- each one
+   opens the full render, in the app, because the detail is the whole point of
+   it and a tab the studio is not in answers a different question. */
+.filmstrip { display: grid; gap: 7px; margin-top: 2px; }
+.film-row { display: grid; gap: 4px; }
+.film-label { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+              text-transform: uppercase; color: var(--dim); }
+/* They grow with the column, which is half the view: tracks that
+   fill the width rather than a fixed 100px, `auto-fill` so three frames stay
+   frames instead of stretching into two banners. */
+.film-frames { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+               gap: 5px; }
+.film-frame { display: block; width: 100%; padding: 0; cursor: zoom-in;
+              border: 1px solid var(--line); border-radius: var(--r);
+              overflow: hidden; background: var(--sunken); line-height: 0; }
+.film-frame:hover { border-color: var(--accent); }
+.film-frame img { width: 100%; height: auto; aspect-ratio: 4 / 3;
+                  object-fit: cover; display: block; }
+
+/* One of them, opened large: the chart's window, with the strip's own order
+   under it so the next frame is a key rather than a second click. */
+.z-box.framebox { width: min(1100px, 96vw); }
+.frame-plot { background: var(--sunken); border-radius: var(--r); padding: 4px;
+              display: flex; align-items: center; justify-content: center; }
+.frame-img { display: block; width: auto; height: auto;
+             max-width: 100%; max-height: 74vh; border-radius: 2px; }
+.frame-nav { display: flex; align-items: center; gap: 8px; padding: 12px 2px 2px; }
+
+.v-terms { border-top: 1px solid var(--line-soft); padding-top: 7px; display: grid; gap: 3px; }
+.v-terms-h { font-family: var(--mono); font-size: 9.5px; letter-spacing: .08em;
+             text-transform: uppercase; color: var(--dim); margin-bottom: 2px; }
+.v-term { display: grid; grid-template-columns: minmax(70px, 30%) 1fr auto;
+          gap: 7px; align-items: baseline; font-size: 11px; }
+.v-term .nm { font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-term .v-why { color: var(--dim); font-size: 11px; }
+.v-term.warn .v-why { color: var(--warn); }
+.v-term.fail .v-why { color: var(--bad); }
+.v-term .v { font-family: var(--mono); font-size: 10px; color: var(--dim);
+             font-variant-numeric: tabular-nums; }
+
+/* ── typing over a running turn ─────────────────────────────────────────
+   Two buttons in the corner while a turn runs: interrupt-and-send sits left
+   of Stop, the same size, so enter and the click do the same thing. */
+.agent-send.interrupt { right: 38px; }
+/* A message on its way: typed over a turn the server is still ending. */
+.m-ghost { opacity: .55; }
+
+/* ── who is driving ──────────────────────────────────────────────────────
+   The provider chip is a menu when there is more than one. Its reasons for
+   not being ready are sentences, so the rows wrap. */
+.provbtn { max-width: 18ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.provmenu { min-width: 30ch; }
+.provmenu .mr { white-space: normal; color: var(--dim); }
+
+/* ── this machine: what the install can do (empty state + Settings) ────── */
+/* The empty state is a 62ch column of prose; the machine card needs the
+   width of a fix line, so the variant that carries it is wider. */
+.nothing.wide { max-width: 88ch; }
+.machine { margin: 14px 0 10px; border: 1px solid var(--line); border-radius: var(--r);
+  background: var(--panel); overflow: hidden; }
+.machine-h { display: flex; align-items: baseline; gap: 10px; padding: 7px 10px;
+  border-bottom: 1px solid var(--line-soft); }
+.machine-h h4 { margin: 0; font-size: 11.5px; font-weight: 600; }
+.machine-where { margin-left: auto; font-family: var(--mono); font-size: 9.5px;
+  color: var(--dim); max-width: 50%; overflow: hidden; text-overflow: ellipsis;
+  white-space: nowrap; }
+.machine-rows { display: grid; grid-template-columns: max-content max-content 1fr;
+  column-gap: 12px; row-gap: 0; }
+.machine-row { display: contents; }
+.machine-row > span { padding: 5px 10px; border-bottom: 1px solid var(--line-soft);
+  font-size: 11.5px; line-height: 1.5; min-width: 0; }
+.machine-row:last-child > span { border-bottom: 0; }
+.machine-mark { font-family: var(--mono); font-size: 10px; text-align: center; }
+.machine-row.ok .machine-mark { color: var(--ok, #3fa66b); }
+.machine-row.warn .machine-mark { color: var(--warn); }
+.machine-row.bad .machine-mark { color: var(--bad); }
+.machine-name { color: var(--text); font-weight: 600; }
+.machine-detail { color: var(--muted); overflow-wrap: anywhere; display: flex;
+  flex-direction: column; gap: 2px; }
+.machine-fix { color: var(--text); font-size: 11px; }
+.machine-fix::before { content: "↳ "; color: var(--dim); }
+.first-steps { margin: 12px 0 14px; }
+.first-steps h4 { margin: 0 0 6px; font-size: 11.5px; font-weight: 600; }
+.first-steps ol { margin: 0; padding-left: 20px; }
+.first-steps li { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-bottom: 6px; }
+.first-steps li b { color: var(--text); }
+.set-body .machine { margin: 0; }
+
+
+/* ── headline metrics: which series, how many points, per task ─────────── */
+.hl-config { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+  font-size: 11.5px; color: var(--muted); }
+.hl-label { font-family: var(--mono); font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; }
+.hl-window { font: inherit; font-size: 11.5px; color: var(--text); background: var(--sunken);
+  border: 1px solid var(--line); border-radius: 4px; padding: 2px 6px; }
+.hl-pickbtn.on { border-color: var(--accent); }
+.hl-note { font-family: var(--mono); font-size: 10px; color: var(--dim); }
+.hl-pick { flex-basis: 100%; display: grid; gap: 3px; max-height: 240px; overflow: auto;
+  padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
+.hl-pick-h { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.hl-opt { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 10.5px;
+  color: var(--text); cursor: pointer; }
+.hl-opt .mn { overflow-wrap: anywhere; }
+.hl-auto { color: var(--dim); font-size: 9.5px; }
+
+/* ── the report popover (report.js) ──────────────────────────────────── */
+/* Under the Report button, in the Records toolbar and on the library card.
+   `.menu` gives it the app's menu surface; this only lays out its rows. */
+.menuwrap.report .menu { left: auto; right: 0; width: min(380px, 92vw); max-height: none; overflow: visible; }
+.report-h { display: flex; align-items: center; gap: 8px; }
+.report-h .sp { flex: 1; }
+.report-h .eyebrow { margin: 0; }
+.report-note { padding: 10px 11px; font-family: var(--mono); font-size: 11px; }
+.report-sum { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 9px 11px 4px; }
+.report-modes { display: flex; flex-direction: column; gap: 2px; padding: 4px 6px; }
+.report-mode { display: grid; grid-template-columns: 16px minmax(0, 1fr); gap: 0 8px; align-items: center;
+  padding: 5px 5px; border-radius: var(--r); cursor: pointer; }
+.report-mode:hover { background: var(--raised); }
+.report-mode input { margin: 0; }
+.report-mode-l { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; font-size: 12.5px; }
+.report-mode-l small { font-size: 10.5px; color: var(--dim); white-space: nowrap; }
+.report-mode .why-note { grid-column: 2; margin: 0; color: var(--dim); }
+.report-pop .m-error { margin: 6px 11px; }
+.report-saved { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 11px 2px;
+  border-top: 1px solid var(--line-soft); margin-top: 4px; }
+.report-saved .fp { flex: 1 1 100%; font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.report-pop .launch-go { padding: 8px 11px 10px; }
+.act.tiny { padding: 1px 8px; font-size: 10px; }
+
+/* The apps' own sessions, offered in the conversation menu (agent.js
+   `externalSessions`), and the way back to a terminal on each row. */
+.conv-ext { border-top: 1px solid var(--line-soft); }
+.conv-ext .conv-ext-h { border-top: 0; }
+.conv-ext-cwd { padding: 2px 10px 6px; font-family: var(--mono); font-size: 9px; color: var(--dim); overflow-wrap: anywhere; }
+.conv-ext-cwd code { color: var(--fg-dim, var(--dim)); }
+.conv-ext-row .mn { font-weight: 400; }
+.conv-via { font-family: var(--mono); font-size: 9px; padding: 1px 5px; border-radius: 3px;
+            border: 1px solid var(--line-soft); color: var(--dim); white-space: nowrap; align-self: center; }
+.conv-via.studio { color: var(--accent); border-color: var(--accent-dim); }
+.conv-resume { display: block; margin-top: 3px; font-size: 9px; padding: 0 4px; color: var(--dim); }
+.conv-resume:hover { color: var(--accent); }
+/* A one-line row -- "+ new conversation", the sessions header -- has no
+   dot, name and time to lay out in three columns; put on the grid it wrapped
+   one word per line inside the 9px dot column. */
+.convmenu .conv-new { display: block; }
+/* A session row leads with its "via" badge, not a dot, and its title is a
+   whole sentence: own columns, one line, ellipsis. */
+.convmenu .conv-ext-row { grid-template-columns: auto minmax(0, 1fr) auto; }
+.convmenu .conv-ext-row .mn { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The conversation menu, regrouped: a filter box, day headings inside the
+   current task, and one folded line per other task (agent.js `conversations`). */
+.conv-filterwrap { padding: 6px 11px 2px; }
+.conv-filter { width: 100%; box-sizing: border-box; font: inherit; font-family: var(--mono); font-size: 11px;
+               padding: 4px 8px; color: var(--text); background: var(--well, var(--raised)); border: 1px solid var(--line-soft);
+               border-radius: 4px; outline: none; }
+.conv-filter:focus { border-color: var(--accent-dim); }
+.conv-day { padding: 6px 11px 1px; font-family: var(--mono); font-size: 9px; letter-spacing: .04em;
+            text-transform: uppercase; color: var(--dim); opacity: .8; }
+.convmenu .conv-task .mn { color: var(--text); }
+.convmenu .conv-task.on .mn { color: var(--accent); }
+.conv-task-caret { font-size: 9px; color: var(--dim); }
+.convmenu .conv-task + .conv-row { padding-left: 24px; }
+.convmenu .conv-row + .conv-row.other { padding-left: 24px; }

@@ -1,0 +1,439 @@
+/* The studio's stylesheet, part 5 of 6: the terminal drawer, settings, the code comparison, clips,
+   screenshots into a message, the GPU, the open record card and parameter
+   history.
+   The parts are linked in order from index.html, and a later rule wins a tie,
+   so a rule stays in its part rather than moving to one it would suit better. */
+
+/* ── the terminal drawer ─────────────────────────────────────────────────
+   Between the stage and the bar: it takes room from the work rather than
+   covering it. Closed by default, because opening it forks a shell.
+
+   **The root is `.termpane`, not `.term`.** That name belongs to the
+   reward-term bars in Build, whose rule sets `align-items: center` -- shared,
+   every child of this drawer shrinks to its content and floats in the middle
+   of the strip: a header island, a thin body, and an input box hanging in
+   space. Two components cannot share a class name and only one of them know.
+
+   **One ground, and it is the app's own.** Three stacked surfaces -- a white
+   header bar, a `--sunken` body, a white input bar -- read as three panels
+   rather than as one terminal. */
+.termpane { display: flex; flex-direction: column; min-height: 0; flex: 0 0 auto;
+            background: var(--ground); border-top: 1px solid var(--line);
+            /* the drag handle on its top edge is absolutely positioned */
+            position: relative; }
+
+/* The tab strip. Several shells, the way every other terminal has them: the
+   active one is marked by an accent rule under it rather than by a filled
+   pill, because the strip sits on the same ground as the shell below it and a
+   filled tab would be a fourth surface. */
+.term-tabs { display: flex; align-items: stretch; gap: 1px; padding: 0 8px;
+             border-bottom: 1px solid var(--line-soft); flex: 0 0 auto; }
+.term-tab { display: flex; align-items: center; gap: 6px; padding: 5px 7px 4px;
+            border-bottom: 2px solid transparent; color: var(--dim);
+            cursor: default; user-select: none; }
+.term-tab.on { color: var(--text); border-bottom-color: var(--accent); }
+/* A tab is named after the work, so the name is as long as a directory or a
+   command: bounded, and clipped rather than allowed to push the strip wide. */
+.term-name { font-family: var(--mono); font-size: 10.5px; max-width: 16ch;
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.term-x { background: none; border: 0; padding: 0 2px; border-radius: 2px;
+          color: transparent; font-size: 13px; line-height: 1; cursor: pointer; }
+.term-tab:hover .term-x, .term-tab.on .term-x { color: var(--dim); }
+.term-x:hover { color: var(--text); background: var(--raised); }
+.term-new { background: none; border: 0; color: var(--dim); cursor: pointer;
+            font-size: 15px; line-height: 1; padding: 0 8px; align-self: center;
+            border-radius: var(--r); }
+.term-new:hover { color: var(--text); background: var(--raised); }
+.term-note { font-size: 10.5px; color: var(--dim); align-self: center;
+             overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+             min-width: 0; }
+.term-note.bad { color: var(--warn); }
+.term-dot { width: 6px; height: 6px; border-radius: 50%; flex: 0 0 auto;
+            background: var(--dim); }
+.term-dot.live { background: var(--ok); }
+.term-dot.bad { background: var(--warn); }
+/* `.sp` is only a spacer where a rule says so -- it is `margin-left: auto`
+   scoped to each header that uses it, not a global. Without this line the
+   strip packs `^C` and `Hide` against the `+`, three controls in a row with
+   the rest of the strip empty to their right. */
+.term-tabs .sp { margin-left: auto; }
+.term-tabs .act { align-self: center; margin: 3px 0 3px 6px; }
+
+/* The pane holds the emulator and nothing else, so it does not scroll, wrap or
+   set a font: xterm draws its own screen, keeps its own scrollback and
+   measures its cell against the font it is given in JS. A pane that scrolled
+   too would be a second scrollbar over the first one. */
+.term-body { flex: 1; min-height: 0; overflow: hidden;
+             padding: 6px 8px 4px; background: var(--sunken); }
+.term-screen { height: 100%; width: 100%; }
+/* xterm sizes its canvas to the element it is opened in, and its own stylesheet
+   leaves that element at auto height. */
+.term-body .xterm { height: 100%; }
+.term-body .xterm-viewport { background: transparent !important;
+                             scrollbar-width: thin; }
+.termbtn.on { border-color: var(--accent-dim); color: var(--accent); }
+
+/* ── the settings window ─────────────────────────────────────────────────
+   Everything the studio remembers, in one place, with the half that needs a
+   restart marked as such rather than appearing to have been applied. */
+.z-box.settings { width: min(680px, 94vw); max-height: 88vh; display: flex;
+                  flex-direction: column; }
+.set-path { font-family: var(--mono); font-size: 10px; color: var(--dim);
+            max-width: 320px; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap; }
+.set-body { overflow-y: auto; padding: 4px 16px 18px; display: flex;
+            flex-direction: column; gap: 22px; min-height: 0; }
+.set-section { display: flex; flex-direction: column; gap: 10px; }
+.set-head { display: flex; flex-direction: column; gap: 3px; }
+.set-head h3 { margin: 0; font-size: 12.5px; font-weight: 600; }
+.set-note { font-size: 11px; color: var(--dim); line-height: 1.5; }
+.set-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.set-col { display: flex; flex-direction: column; gap: 5px; }
+.set-label { font-size: 11px; color: var(--muted); min-width: 92px; }
+.set-lines { font-family: var(--mono); font-size: 11px; line-height: 1.6;
+             resize: vertical; }
+.set-swatches { display: flex; gap: 7px; flex-wrap: wrap; }
+.set-swatch { width: 20px; height: 20px; border-radius: 50%; padding: 0;
+              background: var(--accent); border: 1px solid var(--accent-dim); }
+.set-swatch.on { box-shadow: 0 0 0 2px var(--panel), 0 0 0 4px var(--accent); }
+.set-choices { display: flex; gap: 7px; flex-wrap: wrap; flex: 1; min-width: 0; }
+.set-choice { display: flex; flex-direction: column; align-items: flex-start;
+              gap: 2px; text-align: left; padding: 7px 10px; min-width: 0;
+              flex: 1 1 190px; background: var(--panel);
+              border: 1px solid var(--line); border-radius: var(--r); }
+.set-choice b { font-size: 11.5px; font-weight: 500; color: var(--text); }
+.set-choice small { font-size: 10px; color: var(--dim); line-height: 1.45;
+                    white-space: normal; }
+.set-choice[aria-pressed="true"] { border-color: var(--accent-dim);
+                                   background: var(--accent-soft); }
+.set-choice[aria-pressed="true"] b { color: var(--accent); }
+.set-go { display: flex; align-items: center; gap: 10px; margin-top: 2px; }
+.set-restart { display: flex; align-items: flex-start; gap: 9px;
+               padding: 10px 12px; border-radius: var(--r);
+               background: var(--wash-warn); border: 1px solid var(--edge-warn);
+               font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+/* ── the comparison, on Code ─────────────────────────────────────────────
+   Five stacked cards, all true, make together an answer nobody reads. All
+   five are about this run against its parent, and four are
+   only interesting once you know which file to look at — so the summary is a
+   line here and the patch is on the file, where you are already looking. */
+.chg-strip { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+             row-gap: 6px; padding: 0 0 10px; flex: 0 0 auto; min-width: 0; }
+.chg-sum { font-size: 11.5px; color: var(--text); font-variant-numeric: tabular-nums; }
+.chg-quiet { font-size: 11.5px; color: var(--dim); }
+.chg-said { font-size: 11px; color: var(--muted); min-width: 0; max-width: 46ch;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chg-dirty { font-size: 11px; color: var(--warn); }
+.chg-detail { display: flex; flex-direction: column; gap: 10px; flex: 0 0 auto;
+              max-height: 46vh; overflow-y: auto; padding-bottom: 10px; }
+/* The open file's own patch, in place of the editor. */
+.fview-patch { flex: 1; min-height: 0; overflow: auto; padding: 10px 12px; }
+
+/* ── the clip, playing on the card ───────────────────────────────────────
+   Not a viewer: the picture *is* the panel body, edge to edge, one rectangle
+   that is the same in every tense and at every height the panel is dragged to.
+
+   As a stack -- picture, caption line, row of other clips -- the picture moves
+   and resizes every time you switch tenses, because the two video tenses do
+   not have footers of the same height. And a picture sized from its own
+   *width* overflows: `width: 100%` on a 640x480 clip in a 500 px column asks
+   for 375 px of a 356 px body, so it runs past the bottom edge and takes its
+   caption with it.
+
+   So: the stage takes the height the panel has left, the clip fits inside it,
+   and everything else lies on top. Nothing under the picture can move it,
+   because there is nothing under the picture. */
+.robot-card > .card-b.film,
+.robot-card > .card-headless > .card-b.film { padding: 0; }
+/* And the header above it holds still too, or the picture moves anyway. The
+   tenses do not carry the same controls -- "kept" has a Keep toggle that
+   "over training" has none of -- and the header wraps, so a 25 px button on
+   the second row against a 15 px eyebrow makes the whole stage jump on every
+   switch. One line height for everything in it, so N rows always cost
+   the same N rows. */
+.robot-card > .card-h > * { min-height: 25px; }
+.clip-stage {
+  position: relative; flex: 1 1 auto; align-self: stretch;
+  min-height: 80px; overflow: hidden; background: var(--sunken);
+}
+/* Absolute, so the clip cannot contribute a height of its own to the stack --
+   it is given the rectangle and fits inside it. */
+.clip-stage .clip {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  max-height: none; object-fit: contain; background: transparent;
+  cursor: pointer;
+}
+
+/* Which clip you are watching, over the foot of it. White rather than
+   `--text`: this sits on the picture, not on the panel, and the picture is
+   the same dark render in either colour scheme. */
+.clip-stage .clip-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; align-items: baseline; gap: 9px;
+  padding: 20px 11px 8px; margin: 0; font-size: 11px;
+  color: rgba(255, 255, 255, .66); pointer-events: none;
+  background: linear-gradient(to top, rgba(0, 0, 0, .62), rgba(0, 0, 0, 0));
+  transition: opacity .14s ease;
+}
+.clip-stage .clip-cap b { color: #fff; font-family: var(--mono);
+                          font-variant-numeric: tabular-nums; }
+.clip-stage .clip-cap .muted { margin-left: auto; color: rgba(255, 255, 255, .45); }
+
+/* The other clips, up over the picture when you point at it. Always in the
+   DOM and always focusable, so `:focus-within` brings it up for a keyboard
+   too -- a control that only exists under a pointer is not a control. */
+.clip-stage .clip-rail {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
+  display: flex; gap: 6px; flex-wrap: nowrap; margin: 0;
+  padding: 22px 8px 8px; overflow-x: auto; scrollbar-width: thin;
+  background: linear-gradient(to top, rgba(0, 0, 0, .8), rgba(0, 0, 0, 0));
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity .14s ease, transform .14s ease;
+}
+/* `pointer-events` and not only `opacity`: invisible buttons over the bottom
+   50 px of the picture still take the click, and the click on the picture is
+   what stops it. They come back the moment the stage is pointed at, and
+   tabbing into one still reaches `:focus-within`. */
+.clip-stage:hover .clip-rail, .clip-stage:focus-within .clip-rail {
+  opacity: 1; transform: none; pointer-events: auto;
+}
+.clip-stage:hover .clip-cap, .clip-stage:focus-within .clip-cap { opacity: 0; }
+
+/* Keeping a clip is an action on what is showing, so it is on it. */
+.clip-stage .clip-acts {
+  position: absolute; top: 8px; right: 8px; z-index: 3;
+  display: flex; align-items: center; gap: 6px;
+  opacity: 0; pointer-events: none; transition: opacity .14s ease;
+}
+.clip-stage:hover .clip-acts, .clip-stage:focus-within .clip-acts {
+  opacity: 1; pointer-events: auto;
+}
+.clip-stage .m-error {
+  position: absolute; top: 8px; left: 8px; right: 8px; z-index: 4; margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clip-stage .clip-cap, .clip-stage .clip-rail, .clip-stage .clip-acts {
+    transition: none;
+  }
+  .clip-stage .clip-rail { transform: none; }
+}
+
+/* Everything that is not the picture keeps its own size. In a flex column the
+   default is to shrink, and a squashed composer or a 12 px frame strip is a
+   worse answer than scrolling. (`.clip-stage` and `.viser-host` are
+   deliberately not on this list: they *are* what stretches.) */
+.robot-card .acts, .robot-card .composer, .robot-card .frame-wrap,
+.robot-card .strip, .robot-card .kept-go, .robot-card .diagnosis,
+.robot-card .notyet, .robot-card > .card-b > .m-error {
+  flex: 0 0 auto;
+}
+.kept-go { margin-top: 8px; }
+
+/* Training, or not, in the chrome. The one fact you look for first, and too
+   important to leave in the status bar at 10.5px behind a row of metrics. */
+.trainchip { display: inline-flex; align-items: center; gap: 6px;
+             padding: 3px 10px; border-radius: 100px; font-size: 11px;
+             border: 1px solid var(--line); color: var(--muted);
+             white-space: nowrap; }
+.trainchip b { font-weight: 500; color: var(--text); }
+.trainchip small { font-family: var(--mono); font-size: 10px; color: var(--dim);
+                   font-variant-numeric: tabular-nums; }
+.trainchip.on { border-color: var(--ring-ok); background: var(--wash-ok, none); }
+.trainchip.on b { color: var(--ok); }
+.trainchip.warn { border-color: var(--edge-warn); }
+.trainchip.warn b { color: var(--warn); }
+
+/* ── a picture, into the message ─────────────────────────────────────────
+   The loop this closes: you are watching a clip or a curve, something is
+   wrong, and without this the only way to say so is to describe it. */
+.act.cam { font-size: 12px; line-height: 1; padding: 3px 8px; }
+.z-box.shotbox { width: min(900px, 94vw); }
+.shot-frame { position: relative; display: block; margin: 0 16px;
+              background: var(--sunken); border-radius: var(--r);
+              overflow: hidden; }
+.shot-frame.drawing { cursor: crosshair; touch-action: none; }
+.shot-img { display: block; width: 100%; height: auto; }
+.shot-box { position: absolute; border: 2px solid var(--bad); pointer-events: none; }
+.shot-go { display: flex; align-items: center; gap: 10px; padding: 12px 16px 14px; }
+
+/* What is about to be sent with the message, above the box rather than beside
+   Send: it is part of the message, not part of the button. */
+.attached { display: flex; align-items: center; gap: 9px; margin-bottom: 8px;
+            padding: 6px 8px; background: var(--speech);
+            border: 1px solid var(--speech-line); border-radius: var(--r); }
+.attached-img { width: 46px; height: 34px; object-fit: cover; border-radius: 3px;
+                border: 1px solid var(--speech-line); }
+.attached-note { font-size: 11px; color: var(--muted); min-width: 0;
+                 overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ── the machine underneath ──────────────────────────────────────────────
+   In the bar because it is a *condition* rather than a subject: the same
+   category as "connected" and "trainer running", looked at while doing
+   something else. */
+.gpu-chip { background: none; border: 0; border-right: 1px solid var(--line-soft);
+            font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+            padding: 0 12px; height: 100%; white-space: nowrap;
+            display: flex; align-items: center; gap: 10px; }
+.gpu-chip:hover, .gpu-chip.on { background: var(--raised); color: var(--text); }
+.gpu-starve { color: var(--warn); border-right: 1px solid var(--line-soft); cursor: help; }
+.gpu-one { display: inline-flex; align-items: baseline; gap: 5px; }
+.gpu-i { color: var(--dim); }
+.gpu-chip b { color: var(--text); font-weight: 400;
+              font-variant-numeric: tabular-nums; }
+.gpu-mem { color: var(--dim); }
+
+/* The popup: nvidia-smi for someone who will not open a terminal to read it.
+   Wider and taller than the other menus because it is a table and a chart,
+   not a list of choices; still capped to the window, and it scrolls. */
+.gpumenu { width: min(540px, calc(100vw - 16px)); min-width: 0; max-width: none;
+           max-height: min(680px, 84vh); }
+.gpu-menu-h { display: flex; align-items: baseline; gap: 10px; }
+.gpu-asof { font-family: var(--mono); font-size: 9.5px; color: var(--dim);
+            white-space: nowrap; font-variant-numeric: tabular-nums; }
+.gpu-row { padding: 10px 12px 11px; border-top: 1px solid var(--line-soft); }
+.gpu-row:first-of-type { border-top: 0; }
+.gpu-head { display: flex; align-items: baseline; gap: 8px; font-size: 11.5px; }
+.gpu-head b { font-family: var(--mono); font-weight: 400; color: var(--text); }
+.gpu-name { color: var(--muted); font-size: 11px; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.gpu-t { font-family: var(--mono); font-size: 10px; color: var(--muted);
+         font-variant-numeric: tabular-nums; }
+.gpu-t.hot { color: var(--warn); }
+.gpu-gauges { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-top: 9px; }
+.gpu-gauge-l { display: flex; align-items: baseline; gap: 6px; font-family: var(--mono);
+               font-size: 10px; font-variant-numeric: tabular-nums; }
+.gpu-gauge-k { color: var(--dim); }
+.gpu-gauge-v { color: var(--text); white-space: nowrap; }
+.gpu-gauge-n { color: var(--dim); font-size: 9px; white-space: nowrap; }
+.gpu-bar { height: 4px; margin: 4px 0 0; border-radius: 2px;
+           background: var(--sunken); overflow: hidden; }
+.gpu-bar i { display: block; height: 100%; background: var(--accent-dim); }
+.gpu-bar i.full { background: var(--warn); }
+.gpu-facts { margin-top: 8px; font-family: var(--mono); font-size: 10px; color: var(--dim);
+             font-variant-numeric: tabular-nums; }
+.gpu-throttle { margin-top: 5px; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.gpu-throttle.bad { color: var(--warn); }
+.gpu-spark { margin-top: 8px; }
+.gpu-spark svg { display: block; border-bottom: 1px solid var(--line-soft); }
+.gpu-spark-l { display: flex; gap: 10px; font-family: var(--mono); font-size: 9.5px;
+               color: var(--dim); margin-bottom: 2px; }
+.gpu-spark-k::before { content: ""; display: inline-block; width: 10px; height: 2px;
+                       vertical-align: middle; margin-right: 4px; background: var(--dim); }
+.gpu-spark-k.util::before { background: var(--accent); }
+.gpu-procs { margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+.gpu-proc { display: grid; grid-template-columns: minmax(0, 1fr) 64px 56px 52px 46px;
+            gap: 8px; align-items: baseline; font-size: 10.5px; color: var(--dim); }
+.gpu-proc.mine { color: var(--text); }
+.gpu-proc-h { font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
+              text-transform: uppercase; color: var(--dim);
+              padding-bottom: 3px; border-bottom: 1px solid var(--line-soft); }
+.gpu-who { font-family: var(--mono); overflow: hidden; text-overflow: ellipsis;
+           white-space: nowrap; min-width: 0; }
+.gpu-user, .gpu-pid, .gpu-for, .gpu-pm { font-family: var(--mono); font-size: 10px;
+                                         font-variant-numeric: tabular-nums;
+                                         overflow: hidden; text-overflow: ellipsis;
+                                         white-space: nowrap; }
+.gpu-pid, .gpu-for, .gpu-pm { text-align: right; }
+.gpu-idle { margin-top: 6px; font-size: 10.5px; color: var(--dim); }
+.gpu-foot { padding: 8px 12px 9px; border-top: 1px solid var(--line-soft);
+            font-size: 9.5px; color: var(--dim); line-height: 1.45; }
+
+/* ── an open record card ─────────────────────────────────────────────────
+   Clicking a card opens it: the clip plays without being hovered, and what
+   the run claimed is on the card rather than a panel away. A grid where
+   clicking only *selects* makes you look somewhere else to find out what you
+   selected, which is the trip this saves. */
+/* Open, the card is the widest thing in the grid, and handing the clip that
+   whole width at `height: auto` draws it taller than the pane, with the run's
+   own facts pushed off the bottom of it. The film is one of two columns and
+   bounded on both axes, so opening a card shows the clip *and* what the run
+   claimed without scrolling for either. */
+.story-open { grid-column: 1 / -1; }
+.story-open .stripe { grid-column: 1 / -1; }
+/* Only when there is a clip: with no film the facts are the card, and a second
+   empty column beside them is a hole. Browsers without `:has()` drop this rule
+   and keep the single-column card, which is the right thing to fall back to. */
+.story-open:has(.story-film) {
+  /* A fixed first column rather than a fraction: the clip is bounded, so a
+     column that grew with the card only added ground either side of it. */
+  display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  align-items: start;
+}
+.story-open .story-film { max-height: none; display: flex;
+                          align-items: center; justify-content: center; }
+/* Its own size, never blown up to the pane's: `auto` on both axes keeps the
+   clip's aspect ratio and the two caps decide which way it is bounded -- the
+   column on a wide card, 320px on a tall clip. */
+.story-open .story-clip { width: auto; height: auto;
+                          max-width: 100%; max-height: 320px;
+                          object-fit: contain; }
+.story-more { display: flex; flex-direction: column; gap: 5px; margin-top: 9px;
+              padding-top: 9px; border-top: 1px solid var(--line-soft); }
+.sm-row { display: grid; grid-template-columns: 74px minmax(0, 1fr); gap: 10px;
+          align-items: baseline; text-align: left; }
+.sm-k { font-size: 10px; letter-spacing: .06em; text-transform: uppercase;
+        color: var(--dim); }
+.sm-v { font-size: 12px; line-height: 1.5; color: var(--text);
+        overflow-wrap: anywhere; white-space: normal; }
+.sm-metrics { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 3px; }
+.sm-metric { display: inline-flex; align-items: baseline; gap: 5px;
+             padding: 3px 8px; border-radius: var(--r);
+             background: var(--raised); font-size: 10.5px; color: var(--dim); }
+.sm-metric b { font-family: var(--mono); font-weight: 400; color: var(--text);
+               font-variant-numeric: tabular-nums; }
+
+/* ── how a parameter moved ───────────────────────────────────────────────
+   The table says what a parameter is now; this says what it was, when it
+   moved and why — three facts that otherwise live in different places. */
+.hist-keys { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 11px;
+             max-height: 92px; overflow-y: auto; }
+.hist-key { display: inline-flex; align-items: baseline; gap: 5px;
+            padding: 3px 8px; border-radius: 100px; font-family: var(--mono);
+            font-size: 10px; background: var(--raised);
+            border: 1px solid var(--line-soft); color: var(--muted); }
+.hist-key:hover { border-color: var(--accent-dim); color: var(--text); }
+.hist-key.on { background: var(--accent-soft); border-color: var(--accent-dim);
+               color: var(--accent); }
+.hist-key b { font-weight: 400; font-size: 9px; color: var(--v-best); }
+.hist-key.on b { color: var(--accent); }
+.hist-chart { margin-bottom: 10px; }
+
+/* Every parameter at once: small multiples, because a learning rate and a
+   reward weight share no y scale and overlaying them would say nothing. The
+   tiles are buttons -- one click zooms into the single-key chart below. */
+.hist-grid {
+  display: grid; gap: 8px; margin-bottom: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+}
+.hg-tile {
+  display: block; width: 100%; text-align: left; padding: 7px 8px 4px;
+  background: var(--sunken); border: 1px solid var(--line); border-radius: var(--r);
+  color: inherit; font: inherit; cursor: zoom-in;
+}
+.hg-tile:hover { border-color: var(--accent-dim); background: var(--raised); }
+.hg-h { display: flex; align-items: baseline; gap: 6px; padding-bottom: 4px; }
+.hg-n {
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.hg-h b { font-weight: 400; font-size: 9px; color: var(--v-best); }
+.hg-v {
+  margin-left: auto; font-family: var(--mono); font-size: 11px;
+  font-variant-numeric: tabular-nums; color: var(--text);
+}
+.hg-flat { height: 104px; display: flex; align-items: center; justify-content: center;
+  font-size: 10.5px; color: var(--dim); }
+.hist-changes { display: flex; flex-direction: column; gap: 4px; }
+.hist-row { display: grid; grid-template-columns: 40px 72px auto minmax(0, 1fr);
+            gap: 10px; align-items: baseline; font-size: 11px; }
+.hr-run { font-family: var(--mono); color: var(--text); }
+.hr-at { font-family: var(--mono); font-size: 10px; color: var(--dim);
+         font-variant-numeric: tabular-nums; }
+.hr-move { font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+           white-space: nowrap; }
+.hr-move b { font-weight: 400; color: var(--text); }
+.hr-why { color: var(--muted); overflow: hidden; text-overflow: ellipsis;
+          white-space: nowrap; }
+.hist-none { font-size: 11.5px; color: var(--dim); line-height: 1.5; }

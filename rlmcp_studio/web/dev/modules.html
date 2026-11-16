@@ -1,0 +1,90 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>rlmcp studio — module check</title>
+<style>
+  body { font: 13px/1.6 ui-monospace, monospace; background: #0d1117; color: #c9d1d9;
+         margin: 0; padding: 24px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  p { color: #8b949e; margin: 0 0 18px; max-width: 62ch; }
+  .row { display: grid; grid-template-columns: 22px 190px minmax(0, 1fr); gap: 10px;
+         padding: 3px 0; border-bottom: 1px solid #21262d; }
+  .ok { color: #3fb950; } .bad { color: #f85149; }
+  pre { margin: 2px 0 0; white-space: pre-wrap; color: #f85149; }
+  #sum { margin-top: 18px; font-size: 14px; }
+</style>
+<h1>Client module check</h1>
+<p style="margin-bottom:6px">
+  See also <a href="checks.html" style="color:#58a6ff">checks.html</a>, which
+  loads the app at a laptop size and walks every view for layout faults.
+</p>
+<p>
+  The client has no build step and no Node toolchain, so a syntax error in a
+  client module is not caught before the browser tries to load it — and when that
+  happens the app is simply a blank page. This imports every module the way the
+  app does and says which ones failed. Open it after editing <code>web/js</code>:
+  <code>/static/dev/modules.html</code>.
+</p>
+<div id="out"></div>
+<div id="sum">importing…</div>
+<script type="module">
+  // Kept in step with the app by hand — a module the app imports but this one
+  // does not is the only way to be missed here, so add new modules to both.
+  const MODULES = [
+    "../js/state.js", "../js/ui.js", "../js/api.js", "../js/annotate.js",
+    "../js/components.js", "../js/components/rail.js", "../js/components/overlays.js",
+    "../js/components/frames.js", "../js/components/clips.js", "../js/components/record.js",
+    "../js/components/robot.js", "../js/components/statusbar.js",
+    "../js/components/metrics.js", "../js/components/close.js",
+    "../js/agent.js", "../js/agent/conversations.js", "../js/agent/transcript.js",
+    "../js/agent/composer.js", "../js/agent/briefing.js", "../js/agent/signin.js",
+    "../js/filetree.js",
+    "../js/build.js", "../js/builder/gates.js", "../js/builder/verify.js",
+    "../js/builder/preview.js", "../js/builder/launch.js",
+    "../js/docs.js", "../js/overview.js", "../js/library.js", "../js/report.js", "../js/recipe.js", "../js/terminal.js", "../js/settings.js", "../js/capture.js",
+    "../js/views.js", "../js/views/shared.js", "../js/views/plots.js", "../js/views/records.js",
+    "../js/views/params.js", "../js/views/source.js",
+    "../js/editor.js", "../js/resize.js",
+    "../js/layouts/console.js", "../js/layouts/focus.js",
+    "../js/layouts/workbench.js", "../js/main.js",
+    // After main.js, which imports them: the action tables are reached through
+    // `app/actions-app.js`, which assembles them as it loads.
+    "../js/app/feed.js", "../js/app/actions-app.js", "../js/app/actions-run.js",
+    "../js/app/actions-build.js", "../js/app/actions-workspace.js",
+    "../js/app/load.js", "../js/app/chrome.js",
+  ];
+  const out = document.getElementById("out");
+  let bad = 0;
+
+  for (const path of MODULES) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const mark = document.createElement("span");
+    const name = document.createElement("span");
+    const note = document.createElement("span");
+    name.textContent = path.replace("../js/", "");
+    row.append(mark, name, note);
+    out.append(row);
+    try {
+      const module = await import(path);
+      mark.textContent = "ok";
+      mark.className = "ok";
+      note.textContent = Object.keys(module).sort().join(", ") || "(no exports)";
+    } catch (err) {
+      bad += 1;
+      mark.textContent = "✗";
+      mark.className = "bad";
+      const pre = document.createElement("pre");
+      pre.textContent = `${err.name}: ${err.message}`;
+      note.append(pre);
+      // Also to the console, so a tool reading console messages sees it.
+      console.error(`module ${path} failed:`, err);
+    }
+  }
+
+  const sum = document.getElementById("sum");
+  sum.textContent = bad
+    ? `${bad} of ${MODULES.length} modules failed to load`
+    : `all ${MODULES.length} modules load`;
+  sum.className = bad ? "bad" : "ok";
+  console.log(`[module-check] ${MODULES.length - bad}/${MODULES.length} ok`);
+</script>

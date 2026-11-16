@@ -1,0 +1,35 @@
+# Environments and build products
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Tool caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Local agent/editor config; it holds machine-specific paths.
+.claude/
+
+# The lock pins an editable path dependency on ../rl-mcp, so it only resolves
+# for a checkout laid out the same way.
+uv.lock
+
+# Records written without $RLMCP_RECORDS set land in ./records; they never
+# belong in this repository. `/records` also matches a symlink.
+/records/
+/records
+
+# Editor and OS noise
+.DS_Store
+*.swp
+
+# Scratch files (screenshots, probes, drafts).
+scratchpad/
+
+# Third-party browser libraries: fetched at build time (rlmcp_studio/vendor.py),
+# never committed.
+rlmcp_studio/web/vendor/

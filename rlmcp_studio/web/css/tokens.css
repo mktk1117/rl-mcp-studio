@@ -1,0 +1,135 @@
+/* One token set, two schemes. Components style through tokens only — never a
+   literal colour, and never a colour whose only definition lives inside a
+   media query. The verdict hues in light are rl-mcp's own values from
+   records/views.py; they were picked for a light ground in the first place, so
+   light is arguably the native palette and dark is the adaptation. */
+
+:root {
+  /* Scrollbars, <select> popups, range thumbs and focus rings are drawn by the
+     browser, and without this they follow the *operating system* -- so a dark
+     app on a light desktop gets white scrollbars and a white dropdown over its
+     own dark panels. This is the one line that makes the theme apply to the
+     parts the app does not paint. */
+  color-scheme: dark;
+
+  --ground:#191817; --panel:#211F1D; --raised:#2A2724; --sunken:#131211;
+  --line:#38342F; --line-soft:#2A2724;
+  --text:#E9E5DE; --muted:#A29C93; --dim:#736D65;
+  --accent:#9FB4C6; --accent-soft:#26313C; --accent-dim:#5F7488;
+
+  --v-best:#4FA3DC; --v-running:#4FA3DC; --v-validated:#4CA97D;
+  --v-provisional:#C9922F; --v-falsified:#D8615D; --v-planned:#7E8C94;
+  --v-interrupted:#B08A54; --v-control:#8394BC; --v-superseded:#7E8C94;
+
+  --ok:#4CA97D; --warn:#C9922F; --bad:#D8615D;
+
+  /* The Docs pane is the app's one *document* surface, and it cannot be built
+     from the panel tokens: "raised" means a step *lighter* in dark and a step
+     *darker* in light, so one token would give the code block the wrong side
+     of the ground in one of the two schemes. These are the paper set — the
+     reading ground, the sidebar beside it, and the three fills that sit on it.
+     Dark repeats its panel values, so here the paper set changes nothing. */
+  --paper:#131211; --paper-rail:#1B1A18; --paper-block:#211F1D;
+  --paper-head:#211F1D; --paper-stripe:#232120;
+
+  /* One turn of the agent's, as a surface: the fill it sits on, the card a
+     tool call gets inside it, and the hairline between them. Separate from the
+     panel tokens for the same reason the paper set is -- and separate from the
+     paper set because this one is *chrome*, not a document. */
+  --speech:#26231F; --speech-card:#1B1A18; --speech-line:#38342F;
+
+  --wash-warn:rgba(201,146,47,.07); --edge-warn:rgba(201,146,47,.25);
+  --ring-ok:rgba(76,169,125,.35); --pulse:rgba(79,163,220,.5);
+  --shadow:rgba(0,0,0,.32);
+  --overlay-ink:rgba(19,18,17,.76); --overlay-edge:rgba(233,229,222,.16);
+
+  --mono: ui-monospace,"JetBrains Mono","SF Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+  --sans: ui-sans-serif,system-ui,"Segoe UI",Cantarell,"Helvetica Neue",Arial,sans-serif;
+  /* Serif is Claude's voice: the desktop app sets its replies in one, and the
+     agent panel here is the same content in a narrower column. Chrome stays
+     sans, which is the whole point of the distinction -- you can tell who is
+     speaking before reading a word. */
+  --serif: ui-serif,Charter,Georgia,"Times New Roman",serif;
+  /* Softer than a developer tool's hairline corner, which is the most visible
+     single difference from the desktop app. `--r-card` is for the surfaces
+     that read as sheets of paper -- cards, turns, menus; `--r` stays small for
+     the controls sitting on them. */
+  --r:5px; --r-card:10px;
+}
+
+:root[data-scheme="light"] {
+  color-scheme: light;
+
+  --ground:#F5F3EF; --panel:#FFFFFF; --raised:#EFECE6; --sunken:#E8E4DC;
+  --line:#DCD7CE; --line-soft:#EBE7E0;
+  --text:#1E1C19; --muted:#5F5A52; --dim:#8A857C;
+  --accent:#40566B; --accent-soft:#E7EBEF; --accent-dim:#AFBFCB;
+
+  --v-best:#1F77B4; --v-running:#1F77B4; --v-validated:#2C7A57;
+  --v-provisional:#9A6314; --v-falsified:#B93E3C; --v-planned:#8A98A6;
+  --v-interrupted:#8A6A3C; --v-control:#6B7FA8; --v-superseded:#8A98A6;
+
+  --ok:#2C7A57; --warn:#9A6314; --bad:#B93E3C;
+
+  /* Paper is white here, and the fills are tints of it rather than of the
+     ground: a code block on a white page has to be a shade *down*, and
+     `--panel` is white, so a block drawn with it vanishes. `--paper-block`
+     sits between white and the `--sunken` ground: darker than the page,
+     lighter than the grey panels around it.
+
+     The rail is a hair off white and the rule between it and the page does the
+     separating -- one sheet, ruled, rather than two panels. It is also the
+     cheapest arrangement, because a neutral rail leaves the app's own
+     `--raised` and `--accent-soft` working as the row states and needs no
+     tokens beyond the ground itself. */
+  --paper:#FFFFFF; --paper-rail:#FBFAF8; --paper-block:#F5F3EF;
+  --paper-head:#EFECE6; --paper-stripe:#FAF8F5;
+
+  /* A true neutral, deliberately outside the ramp above: every grey in this
+     scheme is green-tinted (green sits above red in all four), which reads as
+     a cast once it is a large fill behind body text rather than a hairline. */
+  --speech:#F3F1ED; --speech-card:#FFFFFF; --speech-line:#E6E2DA;
+
+  --wash-warn:rgba(154,99,20,.07); --edge-warn:rgba(154,99,20,.3);
+  --ring-ok:rgba(44,122,87,.4); --pulse:rgba(31,119,180,.45);
+  --shadow:rgba(30,28,25,.11);
+}
+
+/* ── the accent, which is a preference ────────────────────────────────────
+   Seven hues, and the constraint that shapes the list: rl-mcp owns the verdict
+   palette, and it already holds blue (running, best), green (validated), amber
+   (provisional) and red (falsified). An accent near any of those makes "this
+   row is selected" look like "this run is live", which is a distinction the
+   app cannot afford to blur -- so the choices sit in the hues the verdicts
+   leave free, and `cyan` is included knowing it is the closest call.
+
+   Each hue is declared once per scheme and serves two masters: `:root` when it
+   is the chosen accent, and a bare class so a swatch in the picker can paint
+   itself with the same values rather than a second copy of them.
+
+   Slate is the default, and lives in the base blocks above as well, so a page
+   that has not been told an accent still has one. */
+:root[data-accent="slate"], .accent-slate { --accent:#9FB4C6; --accent-soft:#26313C; --accent-dim:#5F7488; }
+:root[data-scheme="light"][data-accent="slate"],
+:root[data-scheme="light"] .accent-slate { --accent:#40566B; --accent-soft:#E7EBEF; --accent-dim:#AFBFCB; }
+:root[data-accent="graphite"], .accent-graphite { --accent:#B4B4BE; --accent-soft:#2E2E34; --accent-dim:#6E6E78; }
+:root[data-scheme="light"][data-accent="graphite"],
+:root[data-scheme="light"] .accent-graphite { --accent:#4E4E57; --accent-soft:#ECECEE; --accent-dim:#B9B9C0; }
+:root[data-accent="indigo"], .accent-indigo { --accent:#8E9BFF; --accent-soft:#2C3350; --accent-dim:#5E68B8; }
+:root[data-scheme="light"][data-accent="indigo"],
+:root[data-scheme="light"] .accent-indigo { --accent:#4A54BE; --accent-soft:#E8EAFA; --accent-dim:#AAB1EC; }
+:root[data-accent="violet"], .accent-violet { --accent:#B591F0; --accent-soft:#33254D; --accent-dim:#7E5FB5; }
+:root[data-scheme="light"][data-accent="violet"],
+:root[data-scheme="light"] .accent-violet { --accent:#7040B8; --accent-soft:#EFE7FA; --accent-dim:#C4A8E6; }
+:root[data-accent="plum"], .accent-plum { --accent:#E48ABC; --accent-soft:#45213A; --accent-dim:#A85B87; }
+:root[data-scheme="light"][data-accent="plum"],
+:root[data-scheme="light"] .accent-plum { --accent:#A03A73; --accent-soft:#F7E6F0; --accent-dim:#DDA8C7; }
+:root[data-accent="teal"], .accent-teal { --accent:#5FC0B2; --accent-soft:#10332F; --accent-dim:#3E8C81; }
+:root[data-scheme="light"][data-accent="teal"],
+:root[data-scheme="light"] .accent-teal { --accent:#0D7068; --accent-soft:#DCEFEC; --accent-dim:#94C9C2; }
+:root[data-accent="cyan"], .accent-cyan { --accent:#6FBEDA; --accent-soft:#10303C; --accent-dim:#3F8AA6; }
+:root[data-scheme="light"][data-accent="cyan"],
+:root[data-scheme="light"] .accent-cyan { --accent:#106A87; --accent-soft:#DEEDF3; --accent-dim:#97C4D5; }
+:root[data-accent="clay"], .accent-clay { --accent:#D98B6A; --accent-soft:#3A2620; --accent-dim:#9A5B41; }
+:root[data-scheme="light"][data-accent="clay"],
+:root[data-scheme="light"] .accent-clay { --accent:#B4552C; --accent-soft:#F7E9E1; --accent-dim:#E0AA90; }

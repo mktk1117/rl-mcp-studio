@@ -1,0 +1,47 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>rlmcp studio — open at</title>
+
+<!--
+  Open the app in a named state, from a URL.
+
+  The app keeps where you are in localStorage — the task, the view, the layout
+  — which is right for a person and useless for anything that arrives with a
+  fresh profile: a headless browser taking a screenshot, a link in a report, a
+  second window opened to compare two runs. All of them land wherever the last
+  visit left off, which for a fresh profile is nowhere in particular.
+
+  So: /static/dev/goto.html?task=X&view=build&layout=focus&run=012 writes those
+  four keys and hands over to the app. It is a dev page rather than a feature
+  because the feature is deep links proper — the URL naming what you are
+  looking at, and updating as you move — and this is the smallest thing that
+  makes the app screenshotable in the meantime.
+-->
+
+<style>
+  body { background: #0E1315; color: #8497A0; font: 13px/1.6 ui-monospace, monospace;
+         margin: 0; display: grid; place-items: center; height: 100vh; }
+</style>
+
+<p id="say">opening…</p>
+
+<script>
+  const want = new URLSearchParams(location.search);
+  const keys = { task: "rlmcp.task", view: "rlmcp.view", layout: "rlmcp.layout",
+                 scheme: "rlmcp.scheme", robot: "rlmcp.robotMode" };
+  const set = [];
+  for (const [param, key] of Object.entries(keys)) {
+    const value = want.get(param);
+    if (value) { localStorage.setItem(key, value); set.push(`${key}=${value}`); }
+  }
+  // The run is not a localStorage key — the app picks it from the rail — so it
+  // is carried across as a hash the app can read on boot if it ever wants to.
+  const run = want.get("run") || "";
+  // `term=1` is passed *through* rather than stored: opening the drawer forks
+  // a shell, so it is deliberately not something the app remembers. It is here
+  // because a headless browser cannot click the Terminal button, and a picture
+  // of the drawer is the only way to review how it looks.
+  const term = want.get("term") === "1" ? "?term=1" : "";
+  document.getElementById("say").textContent = set.join("  ") || "nothing to set";
+  location.replace("/" + term + (run ? `#run=${encodeURIComponent(run)}` : ""));
+</script>

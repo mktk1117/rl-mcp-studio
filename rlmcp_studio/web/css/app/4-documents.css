@@ -1,0 +1,526 @@
+/* The studio's stylesheet, part 4 of 6: docs and rendered markdown, the accent picker, the
+   conversation menu, folded tool calls, the composer and the briefing.
+   The parts are linked in order from index.html, and a later rule wins a tie,
+   so a rule stays in its part rather than moving to one it would suit better. */
+
+/* ── docs: what was written about the run ────────────────────────────────
+   The same two-pane shape as Source, because it answers the same kind of
+   question about the same repository — a list on the left, the thing you
+   picked on the right. The reading column is measured rather than full width:
+   prose at 1100 px is prose nobody finishes. */
+.docsview { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+/* Same shape, same reason as `.lib` (6-views.css): a document read in a
+   200px column is not read. */
+.docs { display: grid; grid-template-columns: var(--side, clamp(150px, 32%, 288px)) minmax(0, 1fr);
+        gap: 0;
+        flex: 1; min-height: 0; border: 1px solid var(--line);
+        border-radius: var(--r); overflow: hidden; }
+.doclist { background: var(--paper-rail); border-right: 1px solid var(--line);
+           display: flex; flex-direction: column; min-height: 0;
+           overflow: auto; padding: 8px; gap: 2px; }
+.doc-group { display: flex; flex-direction: column; padding: 10px 4px 4px;
+             font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+             color: var(--dim); }
+.doc-group small { text-transform: none; letter-spacing: 0; color: var(--dim);
+                   font-size: 10.5px; }
+.doc-row { display: flex; flex-direction: column; align-items: flex-start;
+           gap: 1px; width: 100%; text-align: left; background: none; border: 0;
+           border-radius: var(--r); padding: 6px 8px; color: var(--muted); }
+.doc-row:hover { background: var(--raised); color: var(--text); }
+.doc-row.on { background: var(--accent-soft); color: var(--accent); }
+.doc-name { font-family: var(--mono); font-size: 11.5px; }
+.doc-title { color: var(--dim); font-size: 10.5px; overflow-wrap: anywhere; }
+.doc-when { color: var(--dim); font-size: 10px; }
+.doc-none { padding: 2px 8px 6px; font-size: 11px; color: var(--dim); }
+/* The list's own header: how many there are, and the verb that looks again.
+   A document written into the task repository does not reach the watcher, so
+   this is the only thing that finds it short of reloading the app. */
+.doc-head { display: flex; align-items: center; gap: 6px; padding: 2px 4px 6px;
+            border-bottom: 1px solid var(--line-soft); margin-bottom: 4px; }
+.doc-head .sp { margin-left: auto; }
+.doc-count { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+             color: var(--dim); }
+/* Beside the Reload button, and the reason it is there: re-reading a file that
+   has not changed alters nothing else on screen. */
+.doc-age { color: var(--dim); font-size: 10.5px; white-space: nowrap; }
+/* An `.act` whose whole label is one glyph: square, so it does not read as a
+   word button with the text missing. */
+.act.icon { display: inline-flex; align-items: center; justify-content: center;
+            width: 24px; height: 24px; padding: 0; flex: 0 0 auto; }
+.act.icon .glyph { font-size: 13px; line-height: 1; }
+.doc-hint { margin-top: auto; padding: 10px 8px 4px; display: flex;
+            flex-direction: column; gap: 5px; font-size: 11px;
+            color: var(--muted); line-height: 1.5; }
+.doc-hint b { color: var(--text); font-size: 11.5px; }
+.doc-hint code { font-family: var(--mono); font-size: 10.5px; }
+.doc-where { background: var(--sunken); border: 1px solid var(--line-soft);
+             border-radius: var(--r); padding: 5px 7px; overflow-wrap: anywhere;
+             user-select: all; }
+
+/* `overflow: hidden` is structural, not cosmetic: this pane is a *frame*, and
+   everything inside it already owns its own scrolling -- `.md` scrolls the
+   document, `.doc-source` scrolls the raw text, `.md-tablewrap` scrolls a wide
+   table. Without it a single unbreakable token in a header or a body can push
+   the frame itself past its grid track, where nothing can scroll to it. */
+.docpane { display: flex; flex-direction: column; min-width: 0; min-height: 0;
+           overflow: hidden; background: var(--paper); }
+.docpane-h { display: flex; align-items: center; gap: 9px; padding: 8px 12px;
+             background: var(--panel); border-bottom: 1px solid var(--line);
+             flex: 0 0 auto; }
+.docpane-h .fp { font-family: var(--mono); font-size: 11.5px;
+                 overflow-wrap: anywhere; }
+/* `--muted` is for a caption beside something else. This is the document
+   itself, read end to end, so it gets `--text` like any other body copy — in
+   light `--muted` is grey-on-white for a whole file. */
+.doc-source { flex: 1; overflow: auto; margin: 0; padding: 18px 22px 60px;
+              font-family: var(--mono); font-size: 11.5px; line-height: 1.65;
+              white-space: pre-wrap; overflow-wrap: anywhere; color: var(--text); }
+
+/* ── the rendered document ───────────────────────────────────────────── */
+/*
+   `.md` scrolls, `.md-body` is the reading column. Keeping them separate is
+   what puts the scrollbar on the edge of the pane rather than on the edge of
+   the text, where a single element carrying both jobs leaves it.
+
+   The measure is the other half of the same idea. A report at the full width
+   of a workbench column is 140 characters a line, roughly twice what anyone
+   reads without losing their place, so the column is capped and centred and
+   the pane keeps its width for the scrollbar and the margins.
+*/
+/* `.md` is the Docs pane's *scroller*; `.prose` is rendered markdown wherever
+   it appears -- a document in that pane, and the agent's replies. One
+   renderer, one set of block styles, two
+   surfaces that both happen to contain prose. */
+.md { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+/* The cap grows with the pane instead of sitting at one measure. 74ch is a
+   fine measure for a page of prose and a bad one for this: these reports are
+   half tables, fingerprint blocks and long paths, and on a maximised window a
+   74ch column is a third of the pane, so every table scrolls sideways with
+   empty ground either side of it. The clamp keeps 74ch as the floor for a
+   narrow pane, tracks the pane at 72% through the middle, and still stops at
+   112ch so a wide window never gets a 200-character line. */
+.md-body { max-width: clamp(74ch, 72%, 112ch); margin: 0 auto;
+           padding: 26px 30px 72px;
+           font-size: 14px; line-height: 1.72; color: var(--text); }
+.prose > *:first-child { margin-top: 0; }
+.prose > *:last-child { margin-bottom: 0; }
+
+/* Headings own the space above them, never below: a heading pushed away from
+   the paragraph it introduces reads as belonging to the one before it. */
+.prose .md-h { margin: 32px 0 10px; line-height: 1.3; color: var(--text);
+            font-weight: 600; letter-spacing: -.008em; }
+.md h1.md-h { font-size: 24px; margin: 4px 0 18px; letter-spacing: -.018em; }
+.md h2.md-h { font-size: 17.5px; margin-top: 36px; padding-bottom: 7px;
+              border-bottom: 1px solid var(--line-soft); }
+.md h3.md-h { font-size: 15px; }
+.md h4.md-h { font-size: 13.5px; }
+/* The two deepest levels are labels, not headings -- sized down and lettered
+   out rather than shouted, which is what a bold 13px line among 14px prose
+   would be. */
+.md h5.md-h, .md h6.md-h { font-size: 11.5px; color: var(--muted);
+                           text-transform: uppercase; letter-spacing: .07em;
+                           margin-top: 26px; }
+
+.prose .md-p { margin: 0 0 14px; }
+.prose .md-hr { border: 0; border-top: 1px solid var(--line); margin: 30px 0; }
+
+.prose .md-list { margin: 0 0 14px; padding-left: 24px; }
+.prose .md-list .md-list { margin: 4px 0 2px; }
+.prose .md-item { margin: 4px 0; padding-left: 2px; }
+.prose .md-item::marker { color: var(--dim); }
+/* A checklist is not a bulleted list: the box is the marker, so the disc goes
+   and the text hangs off the box instead. */
+.prose .md-item.task { list-style: none; margin-left: -24px; padding-left: 24px;
+                    text-indent: -24px; }
+.prose .md-item.task.done { color: var(--muted); }
+.prose .md-box { display: inline-block; width: 24px; text-indent: 0;
+              color: var(--accent); }
+.prose .md-item.task.done .md-box { color: var(--ok); }
+
+.prose .md-quote { margin: 0 0 16px; padding: 3px 0 3px 16px;
+                border-left: 2px solid var(--accent-dim); color: var(--muted); }
+.prose .md-quote > *:last-child { margin-bottom: 0; }
+
+.prose .md-code { margin: 0 0 16px; padding: 12px 14px; background: var(--paper-block);
+               border: 1px solid var(--line-soft); border-radius: var(--r);
+               overflow-x: auto; }
+.prose .md-code code { font-family: var(--mono); font-size: 11.5px;
+                    line-height: 1.6; color: var(--text); white-space: pre; }
+.prose .md-tick { font-family: var(--mono); font-size: .87em; padding: .1em .35em;
+               background: var(--raised); border: 1px solid var(--line-soft);
+               border-radius: var(--r); color: var(--text);
+               overflow-wrap: anywhere; }
+
+.prose .md-link { color: var(--accent); text-decoration: none;
+               border-bottom: 1px solid var(--accent-dim); }
+.prose .md-link:hover { border-bottom-color: var(--accent); }
+/* A reference this studio cannot follow. Shown as what it is rather than as a
+   link that does nothing when clicked. */
+.prose .md-deadlink { color: var(--muted); border-bottom: 1px dotted var(--line); }
+.prose .md-img { max-width: 100%; margin: 4px 0; border: 1px solid var(--line-soft);
+              border-radius: var(--r); }
+
+.prose .md-front { margin: 0 0 20px; font-size: 11.5px; color: var(--dim); }
+.prose .md-front summary { cursor: default; color: var(--dim);
+                        text-transform: uppercase; letter-spacing: .07em;
+                        font-size: 10.5px; }
+.prose .md-front pre { margin: 8px 0 0; padding: 9px 11px; background: var(--paper-block);
+                    border: 1px solid var(--line-soft); border-radius: var(--r);
+                    font-family: var(--mono); font-size: 11px;
+                    white-space: pre-wrap; }
+
+/* A results table is the reason this renderer parses tables at all, and it is
+   also the widest thing a document contains. It scrolls inside its own box --
+   the alternative is the whole page scrolling sideways. Cells wrap rather
+   than holding one line: a prose column
+   that refuses to wrap turns a five-column table into a two-metre one, and the
+   numbers it was built for are short anyway. */
+.prose .md-tablewrap { margin: 0 0 18px; overflow-x: auto;
+                    border: 1px solid var(--line-soft); border-radius: var(--r); }
+.prose .md-table { border-collapse: collapse; font-size: 12.5px; width: 100%;
+                line-height: 1.5; }
+.prose .md-table th, .md .md-table td { padding: 7px 12px; vertical-align: top;
+                                     border-bottom: 1px solid var(--line-soft); }
+/* Not sticky, and that is measured rather than assumed: `overflow-x: auto` on
+   the wrapper makes it a scroll container on *both* axes, sized to its content,
+   so it never scrolls vertically and a sticky header never sticks to anything. */
+.prose .md-table th { background: var(--paper-head);
+                   color: var(--text); font-weight: 600; font-size: 11px;
+                   text-transform: uppercase; letter-spacing: .05em;
+                   white-space: nowrap; border-bottom: 1px solid var(--line); }
+.prose .md-table td { color: var(--muted); }
+/* Numbers read down a column, so they get monospace figures that let the
+   decimal points line up. Text cells keep the prose font. */
+.prose .md-table td[style*="right"] { font-family: var(--mono); font-size: 11.5px;
+                                   color: var(--text); white-space: nowrap; }
+.prose .md-table tbody tr:last-child td { border-bottom: 0; }
+.prose .md-table tbody tr:nth-child(even) td { background: var(--paper-stripe); }
+.prose .md-table tbody tr:hover td { background: var(--accent-soft); }
+
+/* ── the accent picker ──────────────────────────────────────────────────
+   The swatch is `var(--accent)`, and each row carries `accent-<name>`, which
+   redefines that variable on the row itself -- so every dot paints with the
+   exact declaration choosing it would install on the root. There is no second
+   list of hexes to fall out of step. */
+.accentbtn { display: flex; align-items: center; gap: 6px; }
+.accentbtn small, .accentmenu .mn { text-transform: capitalize; }
+.sw { width: 11px; height: 11px; border-radius: 50%; flex: 0 0 auto;
+      background: var(--accent); border: 1px solid var(--accent-dim); }
+.accentmenu { min-width: 168px; }
+.accentmenu .mrow { align-items: center; gap: 9px; }
+.menu-note { display: block; font-size: 9.5px; color: var(--dim);
+             margin-top: 3px; line-height: 1.4; max-width: 210px;
+             text-transform: none; letter-spacing: 0; }
+
+/* The bar's unrecorded-sessions chip. Warned rather than dimmed: a run that
+   trained and has no record is a thing to act on, not a statistic. */
+.unrec-chip { background: none; border: 0; border-right: 1px solid var(--line-soft);
+              font-family: var(--mono); font-size: 10.5px; color: var(--warn);
+              padding: 0 12px; height: 100%; white-space: nowrap; }
+.unrec-chip:hover { background: var(--wash-warn); }
+.unrecmenu { min-width: 300px; max-width: 380px; }
+.unrecmenu .mr { white-space: normal; }
+
+/* The two merged views: a header that stays put, the pane under it scrolling.
+   `min-width: 0` throughout, because a flex child defaults to `min-width:
+   auto` and will not shrink below its content -- which is how a header with a
+   long filename in it pushes its own pane sideways with nothing able to scroll
+   there. */
+.plots-h { display: flex; align-items: center; gap: 10px; padding: 0 0 10px;
+           flex: 0 0 auto; min-width: 0; flex-wrap: wrap; }
+.plots-note { font-size: 11px; color: var(--dim); }
+
+/* Both merged views manage their own height: a header that stays put, and the
+   pane under it doing the scrolling. */
+.plotsview, .recordsview { display: flex; flex-direction: column;
+                           min-height: 0; min-width: 0; height: 100%; }
+.plotsview > .tbview, .plotsview > .plots-b,
+.recordsview > .story, .recordsview > .treewrap { flex: 1; min-height: 0; }
+
+/* The agent panel's conversation menu. The count sits in the header; the
+   attention badge is on the button rather than inside the menu, because "one
+   of these needs you" has to be legible without opening anything. */
+/* Big enough to read at a glance and to say what it counts: a bare number in
+   the panel header does not say where the other agents are. */
+.convbtn { display: inline-flex; align-items: center; gap: 6px;
+           background: var(--raised); border: 1px solid var(--line);
+           border-radius: 100px; padding: 3px 10px 3px 8px;
+           font-family: inherit; font-size: 11px; color: var(--muted); }
+.convbtn:hover { border-color: var(--accent-dim); color: var(--text); }
+.convbtn.on { background: var(--accent-soft); border-color: var(--accent-dim);
+              color: var(--accent); }
+.convbtn .conv-n { font-family: var(--mono); font-size: 11.5px; color: var(--text);
+                   font-variant-numeric: tabular-nums; }
+.convbtn.on .conv-n { color: var(--accent); }
+.convbtn .conv-w { letter-spacing: .02em; }
+.convbtn .conv-caret { font-size: 8px; color: var(--dim); }
+.conv-badge { display: inline-flex; align-items: center; gap: 4px;
+              border-radius: 100px; padding: 1px 7px; font-size: 10px; }
+.conv-badge.needs { background: var(--wash-warn); color: var(--warn);
+                    border: 1px solid var(--edge-warn); }
+.conv-badge.working { color: var(--v-best); }
+.convbtn.attn { border-color: var(--edge-warn); }
+
+/* Which run's conversation this is, not just which thread of it. */
+.th-here { display: inline-flex; align-items: baseline; gap: 6px; min-width: 0; }
+.th-here b { font-family: var(--mono); font-size: 11px; color: var(--text);
+             font-weight: 400; }
+/* The list hangs from the *bar*, not from its button. The button moves --
+   to the right of a short run id, to the left when the bar wraps in a narrow
+   column -- and a 360px menu hung from a button at the left edge spills off
+   the panel and is clipped to a strip. The bar is as wide as the panel, so
+   a menu anchored to it always fits. */
+.threadbar { position: relative; }
+.threadbar .menuwrap { position: static; }
+.convmenu { left: 8px; right: 8px; top: 100%; min-width: 0; max-width: none;
+            max-height: 70vh; overflow-y: auto; }
+.convmenu .menu-h { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.convmenu .mr { white-space: normal; color: var(--dim); }
+.convmenu .conv-new { color: var(--accent); border-top: 1px solid var(--line-soft); }
+/* The three sections of the menu, named. A heading is a heading and not a
+   row: no hover, smaller, spaced from what came before. */
+.conv-sec { display: flex; align-items: baseline; gap: 6px; padding: 8px 11px 3px;
+            font-family: var(--mono); font-size: 9px; letter-spacing: .08em;
+            text-transform: uppercase; color: var(--dim);
+            border-top: 1px solid var(--line-soft); }
+.conv-sec.needs_you { color: var(--warn); }
+.conv-sec.working { color: var(--v-best); }
+.conv-sec-n { font-variant-numeric: tabular-nums; opacity: .7; }
+/* A row that is doing something carries its colour down its edge, so the
+   state reads from across the room and not only from the 9px word. */
+.conv-row.working { box-shadow: inset 2px 0 0 var(--v-best); }
+.conv-row.needs_you { box-shadow: inset 2px 0 0 var(--warn); background: var(--wash-warn); }
+.conv-when { font-family: var(--mono); font-size: 9px; color: var(--dim); white-space: nowrap; }
+.conv-latest { margin-left: 6px; font-family: var(--mono); font-size: 8px; letter-spacing: .06em;
+               text-transform: uppercase; color: var(--accent);
+               border: 1px solid var(--accent-dim); border-radius: 100px; padding: 0 5px;
+               vertical-align: 1px; }
+.mrow[aria-current="true"] .conv-latest { border-color: var(--accent); }
+/* The open conversation's state, said in the panel header. */
+.agent-state { display: inline-flex; align-items: center; gap: 5px;
+               font-family: var(--mono); font-size: 9.5px; padding: 1px 8px;
+               border-radius: 100px; border: 1px solid var(--line); color: var(--dim);
+               white-space: nowrap; }
+.agent-state.working { color: var(--v-best); border-color: var(--v-best); }
+.agent-state-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--v-best);
+                   animation: pulse 2.4s ease-out infinite; }
+.agent-state.needs_you { color: var(--warn); border-color: var(--warn); background: var(--wash-warn); }
+.agent-state.stopping { color: var(--warn); border-color: var(--edge-warn); }
+
+/* A flex child is `min-width: auto` by default and refuses to shrink below its
+   content, so one long filename or one wide heading pushes the whole header
+   past its box -- with `overflow: visible`, nothing can scroll to it.
+   checks.html reports it as "runs Npx past its box with nothing to scroll
+   it". */
+/* Wrap, and failing that scroll. A header with more controls than fit -- and
+   Build's vary with async state, so the overflow comes and goes and is easy
+   to miss by eye -- takes a second line. A single child too wide to wrap (a
+   segmented control is one box) then gets a scrollbar instead of being
+   clipped where nothing can reach it. */
+.card-h, .docpane-h, .fview-h { min-width: 0; flex-wrap: wrap; row-gap: 6px;
+                                overflow-x: auto; scrollbar-width: thin; }
+.card-h .seg, .docpane-h .seg { flex-wrap: wrap; }
+/* And the body under it, for the same reason and with the same order of
+   preference: break the long word first -- a path, a command line, a task id
+   is what these cards are full of -- and only scroll what genuinely cannot
+   break. Guarding only the header moves the fault from `card-h` to `card-b`,
+   which is the tell that the content, not the container, is what is too
+   wide. */
+.card-b { overflow-wrap: anywhere; min-width: 0; overflow-x: auto;
+          scrollbar-width: thin; }
+.card-h > *, .docpane-h > *, .fview-h > * { min-width: 0; }
+.card-h h3, .docpane-h .fp, .fview-h .fp { overflow-wrap: anywhere; }
+
+/* ── folded tool calls ───────────────────────────────────────────────────
+   Unfolded, a turn with six tool calls is six open boxes of arguments between
+   two sentences, and the sentences are what you are reading. Folded by default,
+   with enough in the summary row to say which call it was. */
+.m-tool > summary, .m-tool-out > summary { cursor: pointer; list-style: none; }
+.m-tool > summary::-webkit-details-marker,
+.m-tool-out > summary::-webkit-details-marker { display: none; }
+.m-tool > summary::marker, .m-tool-out > summary::marker { content: ""; }
+.m-tool > summary:hover, .m-tool-out > summary:hover { background: var(--raised); }
+.m-tool-h .sub { font-family: var(--mono); font-size: 10px; color: var(--dim);
+                 min-width: 0; overflow: hidden; text-overflow: ellipsis;
+                 white-space: nowrap; }
+.m-tool-h .nm { flex: 0 0 auto; }
+.m-tool-h .st { flex: 0 0 auto; }
+.m-out-h { display: flex; align-items: baseline; gap: 8px; padding: 5px 9px;
+           font-family: var(--mono); font-size: 10px; min-width: 0; }
+.m-out-gist { color: var(--dim); min-width: 0; overflow: hidden;
+              text-overflow: ellipsis; white-space: nowrap; }
+.m-okmark { color: var(--ok); flex: 0 0 auto; }
+.m-tool-out > summary .m-failed { margin: 0; flex: 0 0 auto; }
+/* Open, the result keeps its bounded scrolling box. */
+.m-tool-out[open] > .m-kvs, .m-tool-out[open] > .m-shot { margin-top: 2px; }
+
+/* ── closer to the Claude Code desktop app ───────────────────────────────
+   Four differences do most of the work, and all four are shape rather than
+   colour -- the palette lives in tokens.css, warm neutrals.
+
+   1. Surfaces that read as sheets get a softer corner. A 3px radius is a
+      developer tool's; the sheets here are cards, turns, menus and panes.
+   2. The agent's prose is set in a serif, because that is Claude's voice and
+      the desktop app makes the same distinction. Chrome stays sans, so you
+      can tell who is speaking before reading a word. Tool calls, arguments
+      and results stay monospace -- they are not speech.
+   3. More air. A density that fits a terminal beside it is wrong for a
+      reading surface; the desktop app leaves room around the text.
+   4. Quieter borders. Hairlines that separate rather than draw boxes. */
+
+.card, .m-turn, .menu, .perm, .z-box, .docs, .files,
+.md-code, .md-tablewrap, .notyet {
+  border-radius: var(--r-card);
+}
+/* Nested boxes take the smaller corner. A card inside a card at the same
+   radius reads as one shape that has gone wrong; the inner one has to be
+   tighter than the surface it sits on. */
+.m-tool, .m-tool-out { border-radius: var(--r); }
+.m-you { border-radius: var(--r-card); }
+.card, .menu, .perm { border-color: var(--line-soft); }
+.card-h { padding: 9px 13px; }
+.card-b { padding: 13px; }
+
+/* Claude speaking. Not the tool calls around it, which are machinery. */
+.m-bub, .m-you {
+  font-family: var(--serif); font-size: 14px; line-height: 1.62;
+  letter-spacing: .002em;
+}
+/* Prose in a 300px column, not on a page. The document scale would put a `##`
+   at 17.5px with 36px above it, which in a transcript is a shout between two
+   sentences. Everything tightens; nothing changes meaning. */
+.m-bub.prose .md-p { margin: 0 0 10px; }
+.m-bub.prose .md-h { margin: 16px 0 6px; font-size: 13px; font-family: var(--sans); }
+.m-bub.prose h1.md-h { font-size: 14.5px; }
+.m-bub.prose h2.md-h { font-size: 13.5px; border-bottom: 0; padding-bottom: 0; }
+.m-bub.prose .md-list { margin: 0 0 10px; padding-left: 20px; }
+.m-bub.prose .md-item { margin: 2px 0; }
+.m-bub.prose .md-code { margin: 0 0 10px; padding: 9px 11px; }
+.m-bub.prose .md-code code { font-size: 10.5px; }
+.m-bub.prose .md-tick { font-size: .85em; }
+.m-bub.prose .md-quote { margin: 0 0 10px; padding-left: 11px; }
+.m-bub.prose .md-hr { margin: 14px 0; }
+.m-bub.prose .md-table { font-size: 11.5px; }
+.m-bub.prose .md-tablewrap { margin: 0 0 10px; }
+.m-you { padding: 10px 13px; }
+.m-turn { padding: 12px 13px; gap: 10px; }
+.agent-b { padding: 14px; }
+.msg .m-who { font-size: 9.5px; letter-spacing: .1em; margin-bottom: 6px; }
+
+/* The document surface is prose too, and the same reasoning applies -- but it
+   is *written* prose rather than speech, so it keeps the app's sans and only
+   takes the extra air. */
+.md-body { font-size: 14.5px; line-height: 1.75; }
+
+/* Hairlines, not boxes. */
+.statusbar { border-top-color: var(--line-soft); }
+.rail, .agentcol { border-color: var(--line-soft); }
+.b-tabs { border-bottom-color: var(--line-soft); }
+
+/* ── the composer's two choices ──────────────────────────────────────────
+   How much runs without asking, and which model runs it. Beside the composer
+   because they are properties of the next thing you send. */
+.modebtn, .modelbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--raised); border: 1px solid var(--line);
+  border-radius: 100px; padding: 3px 9px;
+  font-family: inherit; font-size: 10.5px; color: var(--muted);
+}
+.modebtn:hover, .modelbtn:hover { border-color: var(--accent-dim); color: var(--text); }
+.modebtn[aria-expanded="true"], .modelbtn[aria-expanded="true"] {
+  background: var(--accent-soft); border-color: var(--accent-dim); color: var(--accent);
+}
+.modelbtn .usage { font-family: var(--mono); font-size: 9.5px; color: var(--dim);
+                   font-variant-numeric: tabular-nums; }
+/* The mode is worth a colour, and the colours are not a warning: Auto is how
+   this studio is meant to be driven -- the agent acts, you interrupt -- so it
+   reads as the working state and not as a hazard. Manual and Plan are the two
+   deliberate slowdowns. (`bypass`, a legacy id for Auto, resolves to it on
+   the server, so it never reaches these class names.) */
+.mode-dot { width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+            background: var(--dim); }
+.mode-dot.m-auto-edit, .modebtn.m-auto-edit .mode-dot { background: var(--v-best); }
+.mode-dot.m-manual, .modebtn.m-manual .mode-dot { background: var(--ok); }
+.mode-dot.m-plan, .modebtn.m-plan .mode-dot { background: var(--dim); }
+.modemenu, .modelmenu { min-width: 250px; max-width: 320px; bottom: 100%; top: auto; }
+/* `.mrow` is a three-column grid -- a 9px marker, the label, a trailing mark.
+   The model rows carry no dot, so on that grid the label lands *in the 9px
+   column* and every line of it wraps. Two columns when there is no marker. */
+.modelmenu .mrow { grid-template-columns: minmax(0, 1fr) auto; }
+/* And the note wraps to at most two lines, the other half of the same
+   problem -- "runs everything, including shell commands, without asking" is
+   worth reading and is not worth four lines of a menu. */
+.modemenu .mr, .modelmenu .mr {
+  white-space: normal; color: var(--dim); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* The third choice: how much of the studio's own text starts a conversation.
+   Styled as the other two and deliberately quieter -- no dot and no colour. It
+   is a property of the *next* conversation rather than of the one on screen,
+   and a coloured pill beside two live ones would claim otherwise. */
+.harnessbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--raised); border: 1px solid var(--line);
+  border-radius: 100px; padding: 3px 9px;
+  font-family: inherit; font-size: 10.5px; color: var(--muted);
+}
+.harnessbtn:hover { border-color: var(--accent-dim); color: var(--text); }
+.harnessbtn[aria-expanded="true"] {
+  background: var(--accent-soft); border-color: var(--accent-dim); color: var(--accent);
+}
+.harnessmenu { min-width: 268px; max-width: 330px; bottom: 100%; top: auto; }
+.harnessmenu .mrow { grid-template-columns: minmax(0, 1fr) auto; }
+.harnessmenu .mr {
+  white-space: normal; color: var(--dim); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* The way to read what any of these means, under a rule: it is not a fourth
+   harness, and a menu of three choices about a prompt nobody can see is a
+   choice nobody can make well. */
+.mrow-more { border-top: 1px solid var(--line-soft); }
+.mrow-more .mn { color: var(--accent); }
+
+/* ── the briefing: the prompt, as sent ───────────────────────────────────
+   Wider than the agent panel on purpose. This is a system prompt -- seven
+   markdown files and a page of run context -- and in a 340 px column nobody
+   reads it. */
+.briefbox { width: min(880px, 96vw); display: flex; flex-direction: column; }
+.brief-b { overflow: auto; min-height: 0; }
+.brief-facts {
+  display: grid; gap: 1px; background: var(--line-soft);
+  border: 1px solid var(--line-soft); border-radius: var(--r); overflow: hidden;
+  margin-bottom: 12px;
+}
+.brief-fact {
+  display: grid; grid-template-columns: 132px minmax(0, 1fr); gap: 12px;
+  background: var(--panel); padding: 7px 11px; font-size: 12px; line-height: 1.45;
+}
+.brief-fact .k {
+  font-family: var(--mono); font-size: 9.5px; letter-spacing: .07em;
+  text-transform: uppercase; color: var(--dim); padding-top: 3px;
+}
+.brief-s { border: 1px solid var(--line-soft); border-radius: var(--r);
+           margin-bottom: 8px; background: var(--panel); }
+.brief-s > summary {
+  display: flex; align-items: baseline; gap: 10px; padding: 8px 11px;
+  font-size: 12px; cursor: default;
+}
+.brief-s > summary .nm { font-weight: 600; }
+.brief-s > summary .sub { font-family: var(--mono); font-size: 10px; color: var(--dim);
+                          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.brief-s > summary .st { margin-left: auto; font-family: var(--mono); font-size: 10px;
+                         color: var(--dim); }
+/* As sent, so it wraps rather than scrolls sideways and it is selectable:
+   the thing you do with a prompt you disagree with is copy the paragraph. */
+.brief-text {
+  margin: 0; padding: 10px 12px 12px; background: var(--sunken);
+  border-top: 1px solid var(--line-soft);
+  border-radius: 0 0 var(--r) var(--r);
+  font-family: var(--mono); font-size: 11px; line-height: 1.55; color: var(--muted);
+  white-space: pre-wrap; word-break: break-word; user-select: text;
+  max-height: 46vh; overflow: auto;
+}
+.brief-foot { font-size: 11.5px; color: var(--dim); line-height: 1.5; padding: 4px 2px 0; }

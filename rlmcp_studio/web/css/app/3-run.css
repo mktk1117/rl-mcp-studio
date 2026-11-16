@@ -1,0 +1,565 @@
+/* The studio's stylesheet, part 3 of 6: conversations, frames, the parameter table, the verbs, the
+   robot panel, the record, panel dividers, story cards, the live 3-D view, Build
+   and closing a run out.
+   The parts are linked in order from index.html, and a later rule wins a tie,
+   so a rule stays in its part rather than moving to one it would suit better. */
+
+/* ── conversations ───────────────────────────────────────────────────── */
+/* With fifty records the rail is very tall, and conversations at the bottom of
+   it would mean scrolling past every run in the task to reach the thing you
+   are talking to. It sticks to the bottom of the rail instead. */
+.convs {
+  position: sticky; bottom: 0; z-index: 1;
+  margin-top: 12px; padding-top: 8px; padding-bottom: 4px;
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 -10px 14px -10px var(--shadow);
+}
+.convs .conv { max-height: 44px; }
+.convs .attn { color: var(--warn); font-weight: 400; }
+.conv-empty { padding: 6px 10px; font-family: var(--mono); font-size: 10px; color: var(--dim); }
+/* The one notice in this menu that is prose: a path breaks mid-word if it is
+   allowed to, so it gets the code treatment and its own line. */
+.conv-parked {
+  display: grid; gap: 4px; padding: 8px 10px; margin-bottom: 4px;
+  border-bottom: 1px solid var(--line); font-size: 11px; line-height: 1.45;
+}
+.conv-parked b { font-size: 11px; color: var(--warn); }
+.conv-parked span { color: var(--dim); }
+.conv-parked code {
+  font-family: var(--mono); font-size: 10px; color: var(--fg);
+  overflow-wrap: anywhere; opacity: 0.85;
+}
+.conv-parked button { justify-self: start; font-size: 10px; padding: 2px 8px; }
+.conv {
+  display: grid; grid-template-columns: 9px minmax(0, 1fr) auto; gap: 8px;
+  align-items: center; width: 100%; text-align: left;
+  background: none; border: 0; border-radius: var(--r); padding: 5px 8px; margin-bottom: 1px;
+}
+.conv:hover { background: var(--raised); }
+.conv[aria-current="true"] { background: var(--accent-soft); }
+.conv-state { font-family: var(--mono); font-size: 9px; white-space: nowrap; }
+.conv-state.needs_you { color: var(--warn); }
+.conv-state.working { color: var(--v-best); }
+.conv-new {
+  width: 100%; margin-top: 5px; background: none; border: 1px dashed var(--line);
+  font-family: var(--mono); font-size: 10px; color: var(--dim); padding: 5px;
+}
+.conv-new:hover { color: var(--accent); border-color: var(--accent-dim); }
+
+.threadbar {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 6px 12px; border-bottom: 1px solid var(--line-soft); background: var(--raised);
+}
+.th-name { font-family: var(--mono); font-size: 10.5px; color: var(--accent); }
+.th-count { font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
+.th-jump {
+  padding: 2px 8px; border-radius: 100px; background: transparent;
+  border: 1px solid var(--line); font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+}
+.th-jump.needs_you { border-color: var(--warn); color: var(--warn); }
+.th-jump.working { border-color: var(--v-best); color: var(--v-best); }
+.threadbar .act { padding: 2px 9px; }
+/* Talking to one run while looking at another is a legitimate thing to be
+   doing -- it is what the pin is for -- but never an accident you should have
+   to notice. The bar takes the accent edge while it lasts, and the button is
+   the way back. */
+.threadbar.pinned { border-left: 2px solid var(--accent-dim); }
+.threadbar.pinned .th-here b { color: var(--accent); }
+.th-follow {
+  padding: 2px 9px; border-radius: 100px; background: var(--accent-soft);
+  border: 1px solid var(--accent-dim); color: var(--accent);
+  font-family: var(--mono); font-size: 9.5px;
+}
+.th-follow:hover { border-color: var(--accent); }
+
+/* ── frames ──────────────────────────────────────────────────────────── */
+.frame-wrap { background: var(--sunken); border-radius: var(--r); overflow: hidden; }
+.frame { display: block; width: 100%; height: auto; }
+.strip { display: flex; gap: 8px; padding-top: 10px; overflow-x: auto; }
+.thumb { flex: 0 0 auto; width: 92px; padding: 0; overflow: hidden; background: var(--sunken); border: 1px solid var(--line); border-radius: 2px; }
+.thumb[aria-current="true"] { border-color: var(--accent); }
+.thumb img { display: block; width: 100%; height: 58px; object-fit: cover; }
+.thumb-vid { display: flex; align-items: center; justify-content: center; height: 58px; color: var(--muted); font-size: 16px; }
+.thumb .cap { display: block; padding: 3px 5px; font-family: var(--mono); font-size: 9px; color: var(--dim); border-top: 1px solid var(--line-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* annotation: the frame is a surface you point at, not a picture */
+.frame-wrap.annot-able { position: relative; cursor: crosshair; }
+.frame-wrap.annot-able img { user-select: none; -webkit-user-drag: none; }
+.annot-box { position: absolute; border: 2px solid var(--warn); border-radius: 1px;
+             box-shadow: 0 0 0 1px rgba(0,0,0,.55), 0 0 0 9999px rgba(0,0,0,.28); pointer-events: none; }
+.annot-hint { padding-top: 8px; font-size: 11.5px; color: var(--dim); }
+.annot { display: flex; flex-direction: column; gap: 7px; padding-top: 9px; }
+.annot-where { display: flex; align-items: center; gap: 8px; }
+.annot-ask { display: flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.annot-ask input { accent-color: var(--accent); }
+/* A flat 132 px pushes the ledger sideways in the focus layout's narrow side
+   column, where the whole entry has 89 px to live in. */
+.annot-shot { display: block; margin-top: 6px; padding: 0; width: min(132px, 100%); overflow: hidden;
+              background: var(--sunken); border: 1px solid var(--line); border-radius: 2px; }
+.annot-shot:hover { border-color: var(--accent); }
+.annot-shot img { display: block; width: 100%; height: 74px; object-fit: cover; }
+.annot-shot .cap { display: block; padding: 2px 5px; font-family: var(--mono); font-size: 9px;
+                   color: var(--dim); border-top: 1px solid var(--line-soft); }
+
+/* progress clips: the picture, with the other clips over its foot. The stage
+   that carries all of this is with the robot panel, which is the only thing
+   that renders it. */
+.clip { display: block; width: 100%; height: auto; background: #000; }
+.strip.clips .thumb { width: 78px; }
+.strip.clips .thumb img, .strip.clips .thumb-vid { height: 48px; }
+.strip.clips .thumb .cap { text-align: center; }
+
+.diagnosis { margin-top: 12px; }
+.measures { display: grid; grid-template-columns: repeat(auto-fit, minmax(112px, 1fr)); gap: 1px; background: var(--line-soft); border-radius: var(--r); overflow: hidden; }
+.measure { background: var(--panel); padding: 8px 10px; }
+.measure .l { font-family: var(--mono); font-size: 9px; letter-spacing: .07em; text-transform: uppercase; color: var(--dim); }
+.measure .v { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 15px; margin-top: 2px; }
+.verdict-line { margin-top: 10px; padding: 9px 11px; border-left: 2px solid var(--warn); background: var(--raised); border-radius: 0 var(--r) var(--r) 0; }
+.verdict-line p { margin: 0; font-size: 12px; }
+
+/* ── parameter table ─────────────────────────────────────────────────── */
+.paramview-outer { display: flex; flex-direction: column; gap: 14px; }
+.discovered { display: flex; align-items: center; gap: 8px; padding: 8px 11px; margin-bottom: 10px; border: 1px dashed var(--line); border-radius: var(--r); color: var(--muted); font-size: 11.5px; }
+.ptable { display: flex; flex-direction: column; }
+.prow { display: grid; grid-template-columns: minmax(0, 1fr) auto auto 92px auto; gap: 10px; align-items: center; padding: 5px 0; border-bottom: 1px solid var(--line-soft); }
+.prow:last-child { border-bottom: 0; }
+.prow:hover { background: var(--raised); }
+.pkey { font-family: var(--mono); font-size: 11px; overflow-wrap: anywhere; }
+.pbounds { font-family: var(--mono); font-size: 9.5px; color: var(--dim); white-space: nowrap; }
+.pval { font-family: var(--mono); font-variant-numeric: tabular-nums; font-size: 11.5px; text-align: right; }
+.prow .act { padding: 2px 9px; font-size: 10px; }
+.prow.editing { grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr) auto auto; row-gap: 6px; background: var(--accent-soft); padding: 8px; border-radius: var(--r); }
+.pedit { background: var(--sunken); color: var(--text); border: 1px solid var(--accent-dim); border-radius: var(--r); padding: 5px 8px; font-family: var(--mono); font-size: 11px; }
+.pnote { grid-column: 1 / -1; font-family: var(--mono); font-size: 9.5px; color: var(--dim); }
+.liveness { font-family: var(--mono); font-size: 9.5px; padding: 1px 6px; border-radius: 2px; border: 1px solid var(--line); color: var(--muted); }
+.liveness.live { color: var(--ok); border-color: var(--ring-ok); }
+.liveness.at_reset { color: var(--warn); border-color: var(--edge-warn); }
+.liveness.inert { color: var(--dim); }
+
+/* Shown only when the renderer itself threw -- see `paint` in main.js. */
+.crashbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 200;
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+  padding: 7px 12px; font-size: 12px;
+  background: var(--bad, #b3261e); color: #fff;
+}
+.crashbar button {
+  background: rgba(255, 255, 255, .18); color: #fff; border: 0;
+  border-radius: 4px; padding: 2px 9px; cursor: pointer; font: inherit;
+}
+
+/* the agent's permission table, folded shut in the empty pane */
+.polnote { margin-top: 14px; text-align: left; font-size: 11px; }
+.polnote summary { cursor: pointer; color: var(--dim); font-size: 11px; }
+.polnote summary b { color: var(--warn); font-weight: 500; }
+.pol-h { margin: 9px 0 4px; font-family: var(--mono); font-size: 9.5px;
+         letter-spacing: .07em; text-transform: uppercase; color: var(--dim); }
+.pol-list { display: flex; flex-wrap: wrap; gap: 3px 5px; }
+.pol-list code { font-family: var(--mono); font-size: 9.5px; color: var(--muted);
+                 background: var(--sunken); border: 1px solid var(--line-soft);
+                 border-radius: 3px; padding: 1px 4px; }
+.pol-caveat { margin-top: 9px; color: var(--dim); font-size: 10.5px; line-height: 1.5; }
+
+/* code is not live: an edit reaches the next run, not the running one --
+   see `nextRunBanner` */
+.nextrun {
+  display: flex; align-items: baseline; gap: 9px; margin: 0 12px 8px;
+  padding: 7px 10px; border-radius: var(--r); font-size: 11.5px;
+  color: var(--muted); background: var(--sunken); border: 1px solid var(--line-soft);
+}
+.nextrun.live { border-color: var(--edge-warn, var(--warn)); background: var(--wash-warn, var(--sunken)); }
+.nextrun b { color: var(--text); font-weight: 600; }
+.nextrun .chip { flex: 0 0 auto; }
+.nextrun .act { flex: 0 0 auto; margin-left: auto; align-self: center; }
+
+/* which run the Diff view is comparing against */
+/* Wraps and shrinks. In Workbench with the agent panel open the code pane is a
+   few hundred pixels wide, and a fixed 320px select beside its label is wider
+   than the strip that holds it -- with nothing able to scroll, which
+   `checks.html` reports as content you cannot reach. The pane is the half that
+   gives way here, the same way the library's shelf does. */
+.diff-against { display: flex; align-items: center; gap: 9px; margin-bottom: 2px;
+                flex-wrap: wrap; min-width: 0; }
+.diff-against select { max-width: min(320px, 100%); min-width: 0; }
+
+/* the row that says whether the claim survived */
+.kv.falsifier { padding-top: 6px; margin-top: 4px; border-top: 1px solid var(--line-soft); }
+.kv.falsifier b { font-weight: 600; }
+.kv.falsifier .muted { color: var(--dim); }
+.kv.falsifier .dot { margin-right: 6px; }
+
+/* the empty studio -- see `nothingHere` */
+.nothing { max-width: 62ch; margin: 40px auto; padding: 22px 24px;
+           background: var(--panel); border: 1px solid var(--line);
+           border-radius: var(--r); }
+.nothing h3 { margin: 0 0 10px; font-size: 14px; }
+.nothing p { margin: 0 0 10px; font-size: 12.5px; color: var(--muted); line-height: 1.6; }
+.nothing p.muted { color: var(--dim); font-size: 11.5px; margin-bottom: 0; }
+.nothing code { font-family: var(--mono); font-size: 11px; color: var(--text);
+                background: var(--sunken); border: 1px solid var(--line-soft);
+                border-radius: 3px; padding: 1px 5px; }
+.nothing .pol-list { margin-bottom: 12px; }
+
+.pnote.bad { color: var(--warn); }
+
+.m-gone { font-size: 11px; color: var(--dim); padding: 6px 0; }
+.m-gone code { font-family: var(--mono); font-size: 10.5px; }
+
+.measure .unit { font-size: .68em; color: var(--dim); letter-spacing: 0; }
+.measure .v.s { font-size: 12.5px; font-family: var(--mono); }
+
+/* the whole of what you are being asked to approve -- see `argLines` */
+.perm .argfull {
+  display: block; max-height: 190px; overflow: auto; text-align: left;
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  font-family: var(--mono); font-size: 10.5px; color: var(--text);
+  background: var(--sunken); border: 1px solid var(--line-soft);
+  border-radius: var(--r); padding: 6px 8px; margin-top: 2px;
+}
+.perm .kv { display: block; }
+
+/* a tool's answer, laid out like the arguments above it */
+.m-tool-out .m-kvs .kv { gap: 10px; align-items: baseline; padding: 1px 0; }
+.m-tool-out .m-kvs .kv span:first-child { flex: 0 0 auto; color: var(--dim); }
+.m-tool-out .m-kvs .kv span:last-child { flex: 1 1 auto; min-width: 0; text-align: right;
+                                         overflow-wrap: anywhere; color: var(--muted); }
+.m-tool-out.ok { color: var(--dim); }
+.m-more { margin-top: 4px; color: var(--dim); font-size: 9.5px; }
+
+.m-tool-out.failed { border-color: var(--edge-warn, var(--warn)); }
+.m-failed { color: var(--warn); font-size: 10.5px; margin-bottom: 4px; }
+button.m-more { display: block; margin-top: 5px; background: none; border: 0;
+                padding: 0; color: var(--accent); font: inherit; font-size: 9.5px;
+                cursor: pointer; }
+.m-tool-out .m-shot { display: block; width: 100%; margin-top: 6px; border-radius: var(--r); }
+
+/* ── verb feedback ───────────────────────────────────────────────────────
+   A ring while the trainer works, then a tick or a cross that fades. Inside
+   the button, so nothing shifts position when it appears. */
+.verb-spin, .verb-mark {
+  width: 12px; height: 12px; flex: 0 0 auto; margin-left: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 10px; line-height: 1;
+}
+.verb-spin {
+  border: 1.5px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: verb-turn .7s linear infinite;
+}
+@keyframes verb-turn { to { transform: rotate(360deg); } }
+.verb-mark.ok { color: var(--ok); }
+.verb-mark.bad { color: var(--bad); }
+.verb.working, .act.verb-btn.working { border-color: var(--accent-dim); color: var(--accent); }
+@media (prefers-reduced-motion: reduce) {
+  .verb-spin { animation: none; border-top-color: var(--accent); }
+}
+
+/* ── the trace, drawn like everything else ─────────────────────────────── */
+.tracewrap { margin-top: 12px; border-top: 1px solid var(--line-soft); padding-top: 10px; }
+.trace-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; }
+.trace-chart svg { display: block; width: 100%; }
+
+
+/* ── one panel for the robot, switched by *when* ──────────────────────── */
+.card-headless { display: contents; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 100px; overflow: hidden; }
+.seg-btn {
+  border: 0; border-radius: 0; background: var(--panel); padding: 2px 10px;
+  font-family: var(--mono); font-size: 10px; color: var(--muted);
+}
+.seg-btn + .seg-btn { border-left: 1px solid var(--line); }
+.seg-btn[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); }
+.seg-btn:disabled { opacity: .45; cursor: default; }
+
+/* ── the record, on Control ───────────────────────────────────────────── */
+.brief-line { font-size: 12.5px; line-height: 1.5; margin-bottom: 10px; }
+.brief-fals {
+  display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap;
+  padding: 8px 10px; margin-bottom: 10px;
+  border-left: 2px solid var(--line); background: var(--raised);
+  border-radius: 0 var(--r) var(--r) 0;
+}
+.brief-fals-t { font-size: 12px; color: var(--muted); flex: 1; min-width: 160px; }
+.brief-diff { display: flex; flex-direction: column; gap: 2px; }
+.brief-none { font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
+
+/* ── the video the record kept ────────────────────────────────────────── */
+.kept-strip { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 9px; }
+.kept-strip .act { font-size: 9.5px; padding: 2px 8px; }
+.act.on { border-color: var(--accent-dim); background: var(--accent-soft); color: var(--accent); }
+
+/* ── panel dividers ───────────────────────────────────────────────────────
+   Visible first, draggable second. A strip whose line only appears on hover
+   has nothing on screen to say it is there, and reads as missing. This is the
+   panel's own border, thickened enough to grab. */
+.divider {
+  position: absolute; top: 0; bottom: 0; width: 9px; z-index: 6;
+  cursor: col-resize; touch-action: none; background: transparent;
+}
+.divider.right { left: -5px; }
+.divider.left { right: -5px; }
+.divider::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 1px;
+  background: var(--line);
+}
+.divider::after {
+  content: ""; position: absolute; top: 50%; left: 2px;
+  width: 5px; height: 34px; margin-top: -17px; border-radius: 3px;
+  background: var(--line); opacity: 0; transition: opacity .12s ease;
+}
+.divider:hover::after, .divider:focus-visible::after, .divider.dragging::after { opacity: 1; }
+.divider:hover::before, .divider:focus-visible::before, .divider.dragging::before { background: var(--accent); }
+.divider:focus-visible { outline: none; }
+/* While dragging, nothing else should select or take the pointer. */
+body.resizing { cursor: col-resize; user-select: none; }
+body.resizing iframe, body.resizing video { pointer-events: none; }
+
+.rail, .agentcol, .f-drawer, .ftree { position: relative; }
+
+/* A divider the *container* places, on the seam between its two columns --
+   `--at` is that seam's distance from the container's edge (resize.js,
+   `placed`). Panels that scroll get this kind: a handle inside a scrolling
+   panel is clipped, scrolls away, and earns the panel a scrollbar. */
+.divider.at.left { right: auto; left: calc(var(--at) - 5px); }
+.divider.at.right { left: auto; right: calc(var(--at) - 5px); }
+.bench, .focus, .treewrap, .paramview, .f-body, .files, .docs, .lib, .overview, .build-body { position: relative; }
+
+/* ── a parameter's shape, on its row ──────────────────────────────────── */
+.pspark { display: block; width: 96px; height: 20px; flex: 0 0 auto; }
+.pspark svg { display: block; width: 100%; height: 20px; }
+.pspark.flat { opacity: .45; }
+
+/* ── story cards show their clip ──────────────────────────────────────── */
+.story-film { display: block; position: relative; background: var(--sunken); overflow: hidden; }
+.story-clip { display: block; width: 100%; height: 104px; object-fit: cover; background: var(--sunken); }
+.story-play {
+  position: absolute; right: 6px; bottom: 6px;
+  font-size: 9px; color: var(--text); opacity: .55;
+  background: rgba(12, 17, 19, .7); border-radius: 3px; padding: 1px 5px;
+  pointer-events: none;
+}
+.story-film:hover .story-play { opacity: 0; }
+
+/* ── Control's two columns, and the divider between them ──────────────── */
+.b-col { position: relative; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.b-col.left > .divider { right: -6px; left: auto; }
+
+/* ── the live 3-D view, which is rlmcp's viser in one of our panels ──────
+   The frame is cross-origin on purpose: viser serves its client on the same
+   port as its websocket, so a copy served from our origin would point its
+   socket here and fail. */
+.viser-b { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+/* A grid, not a block: an <iframe> is a replaced element and falls back to its
+   own 150px default when `height: 100%` has no definite parent height to
+   resolve against -- which is what a flex-derived height is. A grid area is
+   definite, so the frame fills the panel it was given. */
+.viser-host {
+  display: grid; flex: 1 1 auto; min-height: 320px; border-radius: var(--r);
+  overflow: hidden; background: var(--sunken); border: 1px solid var(--line-soft);
+}
+/* `display: grid` above would beat the attribute's own `display: none`; a
+   hidden host must take no space, and the frame inside it stays loaded. */
+.viser-host[hidden] { display: none; }
+/* The frame sits between the head and the mode's body, as a child of the
+   card, so the card's own margins apply to it. */
+.robot-card > .viser-host { margin: 0 10px; }
+.viser { display: block; width: 100%; height: 100%; min-height: 0; border: 0;
+         background: var(--sunken); }
+.viser-foot { display: flex; align-items: center; gap: 8px; }
+.offer { padding: 22px 26px; text-align: center; display: grid; gap: 12px; justify-items: center; }
+.offer p { font-size: 12.5px; line-height: 1.55; color: var(--muted); max-width: 46ch; }
+
+/* ── Build: the task as it is being written ─────────────────────────────
+   The gate strip is above the panes rather than inside one, because it is the
+   state of the whole view: a rebuild that failed has to be visible from
+   whichever pane you were reading. */
+.build { display: flex; flex-direction: column; gap: 10px; min-height: 0; height: 100%;
+         /* A container, so the two panes below answer to the stage rather than
+            to the window: with the transcript dragged wide the stage is a few
+            hundred pixels on a 1280px screen, and a window query would still
+            be drawing two columns in it. Same reason as `.ovwrap`. */
+         container-type: inline-size; }
+.gates-wrap { display: grid; gap: 7px; flex: 0 0 auto; }
+.gates {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+  padding: 8px 10px; background: var(--sunken); border: 1px solid var(--line);
+  border-radius: var(--r);
+}
+.gate {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px;
+  border: 1px solid var(--line); border-radius: 100px; background: var(--panel);
+  font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.gate .tick { font-size: 11px; color: var(--dim); }
+.gate.ok .tick { color: var(--ok); }
+.gate.fail { border-color: var(--bad); background: var(--wash-warn); color: var(--bad); }
+.gate.fail .tick { color: var(--bad); }
+.gate.wait { opacity: .5; }
+.gate-d { color: var(--dim); }
+.gates .stamp { font-family: var(--mono); font-size: 10.5px; color: var(--dim); }
+/* An answer about code that has since changed. Warned rather than hidden: it
+   is still the last answer there is, but not about the task as it stands. */
+.gates .stamp.warn { color: var(--warn); }
+.chip.warn { border-color: var(--edge-warn); background: var(--wash-warn); color: var(--warn); }
+/* The preview is holding an environment older than the files on disk. Above
+   the picture, because a note underneath is read after the wrong conclusion. */
+.stale-note {
+  margin: 0 0 10px; padding: 8px 10px; border-radius: var(--r);
+  border: 1px solid var(--edge-warn); background: var(--wash-warn);
+  color: var(--muted); font-size: 11.5px; line-height: 1.5;
+}
+.stale-note b { color: var(--warn); font-weight: 500; }
+.gate-fix {
+  padding: 9px 11px; border-radius: var(--r); font-size: 12.5px; line-height: 1.5;
+  background: var(--wash-warn); border: 1px solid var(--edge-warn); color: var(--warn);
+}
+.gate-fix b { color: var(--warn); }
+.gate-fix p { margin: 6px 0 0; color: var(--muted); }
+
+/* Stacked until there is room for two, and then two *equal* columns. The side
+   one is not numbers that read fine narrow: it is the verification report, six
+   frames of the robot, and a list of terms that do not pay, and all three are
+   squeezed in a strip beside a preview that has the rest of the screen. Same
+   width as the preview, because what is in it is worth the same look. */
+.build-body {
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  gap: 10px; flex: 1 1 auto; min-height: 0;
+}
+/* 720px, because under it half a stage is narrower than a ~340px strip, and
+   stacked -- where each of them gets the whole width -- is the better trade. */
+.build-body > .divider { display: none; }
+@container (min-width: 720px) {
+  .build-body { grid-template-columns: minmax(0, 1fr) var(--side, 50%); }
+  .build-body > .divider { display: block; }
+}
+.preview-card { display: flex; flex-direction: column; min-height: 340px; }
+.preview-card .card-b { flex: 1 1 auto; display: flex; flex-direction: column;
+                        gap: 8px; min-height: 0; }
+.build-side { display: flex; flex-direction: column; gap: 10px; min-height: 0; overflow: auto; }
+/* The cards keep their own height and the column scrolls. Default `flex-shrink`
+   would squash every one of them to fit the stage instead -- and `.card` hides
+   its overflow, so what comes off the bottom is gone rather than reachable
+   (the filmstrip, the frames, half the terms), and the column reports nothing
+   to scroll to. */
+.build-side > * { flex: 0 0 auto; }
+.build-log { border: 1px solid var(--line-soft); border-radius: var(--r);
+             background: var(--sunken); }
+.build-log summary { padding: 5px 9px; font-family: var(--mono); font-size: 10.5px;
+                     color: var(--dim); cursor: default; }
+.build-log pre {
+  margin: 0; padding: 8px 10px; max-height: 220px; overflow: auto;
+  font-family: var(--mono); font-size: 11px; line-height: 1.5; color: var(--muted);
+  white-space: pre-wrap; word-break: break-word; border-top: 1px solid var(--line-soft);
+}
+.build-where .kv { display: grid; grid-template-columns: 62px 1fr; gap: 8px;
+                   align-items: baseline; margin-bottom: 5px; }
+.build-where .kv span { font-family: var(--mono); font-size: 10px; color: var(--dim);
+                        letter-spacing: .08em; text-transform: uppercase; }
+.build-where code { font-size: 11px; word-break: break-all; }
+.build-where .muted { font-size: 11.5px; color: var(--dim); line-height: 1.5; margin: 8px 0 0; }
+
+/* the term bars: a comparison, so they share one scale and a zero line */
+.terms { padding: 9px 10px; display: grid; gap: 5px; }
+.term { display: grid; grid-template-columns: minmax(88px, 34%) 1fr 56px;
+        align-items: center; gap: 9px; }
+.term .nm { font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.term .v { font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+           text-align: right; font-variant-numeric: tabular-nums; }
+.term.neg-term .nm { color: var(--dim); }
+.term .track { position: relative; height: 11px; background: var(--sunken);
+               border-radius: 2px; }
+.term .track::before { content: ""; position: absolute; left: 50%; top: -2px;
+                       bottom: -2px; width: 1px; background: var(--line); }
+.term .track i { position: absolute; top: 0; bottom: 0; border-radius: 2px; display: block; }
+.term .track .pos { background: var(--ok); left: 50%; }
+.term .track .neg { background: var(--bad); right: 50%; }
+.terms-note {
+  margin: 5px 0 0; padding: 7px 9px; border-radius: var(--r); font-size: 11.5px;
+  line-height: 1.45; background: var(--wash-warn); border: 1px solid var(--edge-warn);
+  color: var(--warn);
+}
+.terms-note b { color: var(--warn); }
+.ends { display: flex; gap: 12px; padding: 7px 10px; flex-wrap: wrap;
+        border-top: 1px solid var(--line-soft); font-family: var(--mono);
+        font-size: 10.5px; color: var(--muted); }
+.ends b { color: var(--text); font-weight: 500; }
+
+/* the launch form, in the Build view's side column */
+.launch-form { display: grid; gap: 9px; }
+.launch-form label { display: grid; gap: 3px; }
+.launch-form label span { font-family: var(--mono); font-size: 10px; color: var(--dim);
+                          letter-spacing: .08em; text-transform: uppercase; }
+.launch-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.fb-input.small { width: 100%; }
+.fb-input.why { resize: vertical; min-height: 54px; font-family: var(--sans); }
+.launch-go { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+
+/* Closing a run out. Same field shape as the launch form on purpose: opening a
+   record and closing one are the two ends of the same act. */
+.close-out { display: grid; gap: 9px; }
+.close-out label { display: grid; gap: 3px; }
+.close-out label span, .close-out .eyebrow { font-family: var(--mono); font-size: 10px;
+                       color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+.close-out .muted { font-size: 11.5px; color: var(--dim); line-height: 1.5; margin: 0; }
+.close-out code { font-size: 11px; word-break: break-all; }
+.verdicts { display: flex; flex-wrap: wrap; gap: 6px; }
+.verdict-pick { display: inline-flex; align-items: center; gap: 6px; }
+.verdict-pick[aria-pressed="true"] { background: var(--raised); }
+.launch-live .kv { display: grid; grid-template-columns: 62px 1fr; gap: 8px;
+                   align-items: center; margin-bottom: 6px; }
+.launch-live .kv span:first-child { font-family: var(--mono); font-size: 10px;
+                                    color: var(--dim); letter-spacing: .08em;
+                                    text-transform: uppercase; }
+.launch-live code { font-size: 11px; word-break: break-all; }
+.launch-live .muted { font-size: 11.5px; color: var(--dim); line-height: 1.5; margin: 4px 0 8px; }
+.why-note { font-family: var(--sans) !important; font-size: 11px !important;
+            color: var(--dim); letter-spacing: 0 !important; text-transform: none !important;
+            line-height: 1.45; }
+.act.newtask { border-style: dashed; border-color: var(--accent-dim); color: var(--accent); }
+.z-box.adopt .launch-form { padding: 0 14px 12px; }
+
+/* Flipped by `clampMenu` in main.js when right-alignment would put the menu
+   off the left edge of the window. */
+.menu.menu-left { left: 0; right: auto; }
+
+/* A divider that resizes a height rather than a width: the same handle turned
+   through ninety degrees, sitting on a panel's bottom edge. */
+.divider.vert {
+  left: 0; right: 0; top: auto; bottom: auto; width: auto; height: 9px;
+  cursor: row-resize;
+}
+.divider.vert.bottom { bottom: -5px; }
+.divider.vert.top { top: -5px; }
+.divider.vert::before {
+  left: 0; right: 0; top: 4px; width: auto; height: 1px;
+}
+.divider.vert::after {
+  top: 2px; left: 50%; margin-top: 0; margin-left: -17px;
+  width: 34px; height: 5px;
+}
+body.resizing.rows { cursor: row-resize; }
+
+/* The robot panel is sized, not content-shaped, so its body has to give: the
+   card is the height you chose and whichever tense is showing fills it. */
+/* The bottom 9px of the card are the handle's own -- padding, so nothing
+   else is drawn there. `.card` hides its overflow, so a handle hanging half
+   over the edge is a 4px strip; and one laid over the content sits on the
+   filmstrip's scrollbar, so grabbing the scrollbar resizes the card instead
+   of scrolling the clips. */
+.robot-card { position: relative; display: flex; flex-direction: column; min-height: 0; padding-bottom: 9px; }
+.robot-card > .divider.vert.bottom { bottom: 0; }
+.robot-card > .divider.vert.bottom::before { top: auto; bottom: 0; }
+.robot-card > .divider.vert.bottom::after { top: auto; bottom: 2px; }
+/* Three of the four tenses reach this card through `.card-headless`, which is
+   `display: contents` -- the box is gone, but the *selector* still is not, so
+   a `>` alone matches only the fourth, and the clip player sizes itself in a
+   panel that has already been given a height. */
+.robot-card > .card-b,
+.robot-card > .card-headless > .card-b {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto;
+  display: flex; flex-direction: column;
+}

@@ -1,0 +1,75 @@
+# Publishes a release to PyPI.
+#
+# Trigger: a published GitHub release. The tag is the version with a `v` in
+# front (`v0.1.0`) and must match pyproject.toml; that is checked before
+# anything is built.
+#
+# Auth: PyPI trusted publishing. No token is stored in this repository; PyPI
+# trusts the OIDC identity of this workflow running in the `pypi`
+# environment, which the `id-token: write` permission lets the job present.
+#
+# `workflow_dispatch` is a dry run: it builds and checks the wheel exactly as
+# a release would, and stops before publishing.
+
+name: publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: The tag is the version
+        if: github.event_name == 'release'
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          version="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::release tag is v$tag but pyproject.toml says $version — bump one of them"
+            exit 1
+          fi
+      - name: Build
+        run: uv build
+      - name: The wheel carries the browser libraries
+        run: |
+          python3 - <<'PY'
+          import glob, sys, zipfile
+          wheel, = glob.glob("dist/*.whl")
+          names = set(zipfile.ZipFile(wheel).namelist())
+          required = ("rlmcp_studio/web/vendor/monaco/loader.js",
+                      "rlmcp_studio/web/vendor/xterm/xterm.js")
+          missing = [p for p in required if p not in names]
+          if missing:
+            sys.exit(f"{wheel} is missing: {', '.join(missing)}")
+          PY
+      - name: Install the wheel into an empty environment and use it
+        # The same checks as ci.yml's package job, repeated so a release
+        # cannot ship a wheel nobody installed. rl-mcp resolves from PyPI.
+        run: |
+          uv venv "$RUNNER_TEMP/wheel-venv"
+          uv pip install --python "$RUNNER_TEMP/wheel-venv/bin/python" dist/*.whl
+          cd "$RUNNER_TEMP"
+          wheel-venv/bin/rlmcp-studio --check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: build
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1

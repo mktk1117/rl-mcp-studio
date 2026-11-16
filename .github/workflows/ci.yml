@@ -1,0 +1,82 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint:
+    # Defects a linter catches: the rule selection is in pyproject's
+    # [tool.ruff.lint], and the version is pinned.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uvx ruff@0.16.4 check rlmcp_studio tests setup.py
+
+  test:
+    # The tests need no network, GPU or browser libraries.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: rl-mcp-studio
+      # pyproject's [tool.uv.sources] resolves rl-mcp to ../rl-mcp.
+      - uses: actions/checkout@v4
+        with:
+          repository: mktk1117/rl-mcp
+          path: rl-mcp
+      - uses: astral-sh/setup-uv@v5
+      - name: Test
+        working-directory: rl-mcp-studio
+        run: uv run --extra dev pytest -q
+
+  package:
+    # Build the wheel (setup.py downloads the pinned browser libraries into
+    # it), check its contents, then install it into an empty environment and
+    # run it from outside the source tree.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: rl-mcp-studio
+      - uses: actions/checkout@v4
+        with:
+          repository: mktk1117/rl-mcp
+          path: rl-mcp
+      - uses: astral-sh/setup-uv@v5
+      - name: Build
+        working-directory: rl-mcp-studio
+        run: uv build
+      - name: The wheel carries the browser libraries
+        working-directory: rl-mcp-studio
+        run: |
+          python3 - <<'PY'
+          import glob, sys, zipfile
+          wheel, = glob.glob("dist/*.whl")
+          names = set(zipfile.ZipFile(wheel).namelist())
+          required = ("rlmcp_studio/web/vendor/monaco/loader.js",
+                      "rlmcp_studio/web/vendor/xterm/xterm.js")
+          missing = [p for p in required if p not in names]
+          if missing:
+            sys.exit(f"{wheel} is missing: {', '.join(missing)}")
+          print(f"{wheel}: browser libraries present")
+          PY
+      - name: Install into an empty venv and start from elsewhere
+        # rl-mcp resolves from PyPI, as it does for a user.
+        run: |
+          uv venv /tmp/clean
+          uv pip install --python /tmp/clean/bin/python rl-mcp-studio/dist/*.whl
+          cd /tmp
+          /tmp/clean/bin/rlmcp-studio --check
+
+  container:
+    # The Dockerfile builds the wheel and installs it into an empty image;
+    # scripts/fresh-install.sh checks that image the way a new user would.
+    # Hosted runners have no GPU.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fresh install in a container
+        run: CONTAINER=docker scripts/fresh-install.sh

@@ -1,0 +1,89 @@
+[project]
+name = "rl-mcp-studio"
+version = "0.1.0"
+description = "A GUI for watching, steering and recording RL training runs driven by rl-mcp."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [
+    { name = "Takahiro Miki" }
+]
+keywords = ["reinforcement-learning", "robotics", "mujoco", "mjlab", "mcp", "agentic-ai", "gui", "training-dashboard"]
+classifiers = [
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Environment :: Web Environment",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+    # From PyPI in a built wheel; a checkout resolves it to ../rl-mcp through
+    # [tool.uv.sources]. 0.1.0 is the first release with the wire, hostd's
+    # code-tree push and a trainer that keeps the launcher's code stamp.
+    "rl-mcp[server]>=0.1.0",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.32",
+    "watchfiles>=0.24",
+    "claude-agent-sdk>=0.2.182",
+]
+
+[project.optional-dependencies]
+# The Antigravity SDK wheel carries a large harness binary, so it is optional.
+# The provider imports it lazily; without it the studio starts and the panel
+# names the extra. The dev extra includes it so its tests run.
+antigravity = [
+    "google-antigravity>=0.1.16",
+]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+    "google-antigravity>=0.1.16",
+]
+
+[project.urls]
+Homepage = "https://github.com/mktk1117/rl-mcp-studio"
+Repository = "https://github.com/mktk1117/rl-mcp-studio"
+Documentation = "https://github.com/mktk1117/rl-mcp-studio/tree/main/docs"
+Issues = "https://github.com/mktk1117/rl-mcp-studio/issues"
+Changelog = "https://github.com/mktk1117/rl-mcp-studio/releases"
+
+
+[project.scripts]
+rlmcp-studio = "rlmcp_studio.__main__:main"
+
+[tool.uv.sources]
+rl-mcp = { path = "../rl-mcp", editable = true }
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["rlmcp_studio*"]
+
+[tool.setuptools.package-data]
+# Everything the package needs that is not Python. `web/` lives inside the
+# package because a path outside it would be dropped from the wheel; the
+# browser libraries under web/vendor/ are added by setup.py at build time.
+rlmcp_studio = ["web/**/*", "instructions/*.md"]
+
+[tool.pytest.ini_options]
+# `pythonpath` puts the repository root on sys.path, so a test can import the
+# fixtures module by name (`from tests.conftest import ...`) rather than
+# re-declaring a constant the fixtures already own.
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+# Defects rather than style: undefined names, unused or shadowed imports,
+# mutable defaults. The tree indents by two spaces, so ruff format is not used.
+line-length = 100
+indent-width = 2
+target-version = "py311"
+exclude = ["rlmcp_studio/web", "scratchpad", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["F", "E9", "B006", "B008", "B904"]

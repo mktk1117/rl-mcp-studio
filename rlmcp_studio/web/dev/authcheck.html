@@ -1,0 +1,40 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<title>sign-in states</title>
+<link rel="stylesheet" href="/static/css/tokens.css">
+<link rel="stylesheet" href="/static/css/app/1-base.css">
+<link rel="stylesheet" href="/static/css/app/2-panels.css">
+<link rel="stylesheet" href="/static/css/app/3-run.css">
+<link rel="stylesheet" href="/static/css/app/4-documents.css">
+<link rel="stylesheet" href="/static/css/app/5-drawers.css">
+<link rel="stylesheet" href="/static/css/app/6-views.css">
+<style>body{padding:20px;background:var(--bg);color:var(--text);font-family:var(--sans)}
+h2{font-size:12px;color:var(--dim);margin:22px 0 8px}
+.frame{width:420px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px}</style>
+</head><body>
+<div id="out"></div>
+<script type="module">
+import { state, set } from "/static/js/state.js";
+import { transcriptPane } from "/static/js/agent.js";
+import { composer } from "/static/js/agent/composer.js";
+
+const out = document.getElementById("out");
+function show(title, status, transcript) {
+  state.transcript = transcript || [];
+  state.runId = "053"; state.view = "run"; state.task = "demo";
+  const h = document.createElement("h2"); h.textContent = title;
+  const f = document.createElement("div"); f.className = "frame";
+  f.append(transcriptPane(status), composer(status));
+  out.append(h, f);
+}
+const SIGNED_OUT = { available: false, reason: "not signed in", cli: true,
+                     login: {}, modes: [], models: [] };
+show("cold boot, signed out", SIGNED_OUT, []);
+show("waiting for the code",
+     { ...SIGNED_OUT, login: { waiting_for_code: true, url: "https://claude.ai/oauth/x" } }, []);
+show("expired mid-conversation", { ...SIGNED_OUT },
+     [{ kind: "user", seq: 0, text: "how did it go?" },
+      { kind: "text", seq: 1, text: "Failed to authenticate. API Error: 401 OAuth access token has expired. Re-authenticate to continue." },
+      { kind: "auth_expired", seq: 2, cli: true,
+        says: "Failed to authenticate. API Error: 401 OAuth access token has expired. Re-authenticate to continue." }]);
+</script>
+</body></html>

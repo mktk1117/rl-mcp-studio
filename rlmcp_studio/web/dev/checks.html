@@ -1,0 +1,177 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>rlmcp studio — self checks</title>
+<style>
+  body { font: 13px/1.6 ui-monospace, monospace; background: #0d1117; color: #c9d1d9;
+         margin: 0; padding: 24px; }
+  h1 { font-size: 15px; margin: 0 0 4px; }
+  p  { color: #8b949e; margin: 0 0 14px; max-width: 74ch; }
+  button { font: inherit; background: #1f6feb; color: #fff; border: 0; border-radius: 5px;
+           padding: 6px 14px; cursor: pointer; }
+  button.ghost { background: #21262d; color: #c9d1d9; }
+  #out { margin-top: 18px; }
+  .row { display: grid; grid-template-columns: 20px 230px minmax(0, 1fr); gap: 10px;
+         padding: 3px 0; border-bottom: 1px solid #21262d; }
+  .ok { color: #3fb950; } .bad { color: #f85149; } .note { color: #8b949e; }
+  #sum { margin-top: 16px; font-size: 14px; }
+  iframe { width: 1280px; height: 800px; border: 1px solid #21262d; border-radius: 6px;
+           margin-top: 16px; background: #0d1117; }
+</style>
+
+<h1>Studio self checks</h1>
+<p>
+  The studio's layout checks, in one place. It loads the app in
+  a 1280×800 frame — the size where the worst layout bugs live, and the one a
+  laptop actually has — walks all three layouts across every view, and
+  reports anything that looks wrong. Nothing here writes: it only looks.
+</p>
+<p>
+  Run it after touching <code>web/</code>, together with
+  <a href="modules.html" style="color:#58a6ff">modules.html</a>, which catches the
+  syntax errors this page cannot reach.
+</p>
+
+<button id="go">Run the checks</button>
+<button class="ghost" id="wide">…at 1652×900 as well</button>
+
+<div id="out"></div>
+<div id="sum"></div>
+<iframe id="app" src="/" title="the studio under test"></iframe>
+
+<script type="module">
+  const LAYOUTS = ["workbench", "focus", "console"];
+  const VIEWS = ["build", "overview", "control", "plots", "records",
+                 "params", "source", "docs", "library"];
+
+  const out = document.getElementById("out");
+  const sum = document.getElementById("sum");
+  const frame = document.getElementById("app");
+
+  function line(mark, name, detail) {
+    const row = document.createElement("div");
+    row.className = "row";
+    const m = document.createElement("span");
+    m.textContent = mark === "ok" ? "ok" : mark === "note" ? "·" : "✗";
+    m.className = mark === "ok" ? "ok" : mark === "note" ? "note" : "bad";
+    const n = document.createElement("span");
+    n.textContent = name;
+    const d = document.createElement("span");
+    d.textContent = detail || "";
+    d.className = mark === "bad" ? "bad" : "note";
+    row.append(m, n, d);
+    out.append(row);
+  }
+
+  const wait = (ms) => new Promise(r => setTimeout(r, ms));
+
+  /** Everything wrong with the page as it stands, as a list of sentences. */
+  function textNodes(root) {
+    const out = [];
+    const walk = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    for (let n = walk.nextNode(); n; n = walk.nextNode()) out.push(n);
+    return out;
+  }
+
+  function faults(win, where) {
+    const doc = win.document;
+    const bad = [];
+    const stage = doc.querySelector(".stage");
+    if (!stage) return [`${where}: no stage rendered at all`];
+
+    // A literal null or undefined printed as text -- `append(null)` does this,
+    // and it stringifies to a text node that is *exactly* that word. Scanning
+    // `textContent` for the word anywhere is a different and much weaker test,
+    // and it cries wolf on `/dev/null` inside a Bash call in the agent
+    // transcript, or `"articulation": null,` inside a JSON patch in Diff --
+    // both of which are the content being correct. So: a text node whose whole
+    // value is the word, and not one inside code, a patch or a transcript,
+    // where a program's own output legitimately says it.
+    const CODEISH = ".patch, pre, code, .m-tool-out, .doc-source, .argfull";
+    for (const node of textNodes(stage)) {
+      const value = (node.nodeValue || "").trim();
+      if (value !== "null" && value !== "undefined") continue;
+      if (node.parentElement && node.parentElement.closest(CODEISH)) continue;
+      bad.push(`${where}: a literal "${value}" is on screen`);
+      break;
+    }
+    // The renderer's own guard, which only appears when a paint threw.
+    if (doc.getElementById("paint-crash")) {
+      bad.push(`${where}: the paint guard is showing`);
+    }
+    // Cards drawn on top of each other -- a grid track shrinking under
+    // `overflow: hidden` content, which is invisible from a tall window.
+    const cards = [...stage.querySelectorAll(".card")].filter(c => c.offsetParent);
+    for (let i = 0; i < cards.length; i++) {
+      for (let j = i + 1; j < cards.length; j++) {
+        if (cards[i].contains(cards[j]) || cards[j].contains(cards[i])) continue;
+        const a = cards[i].getBoundingClientRect(), b = cards[j].getBoundingClientRect();
+        const x = Math.min(a.right, b.right) - Math.max(a.left, b.left);
+        const y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+        if (x > 8 && y > 8) bad.push(`${where}: two cards overlap by ${Math.round(x)}×${Math.round(y)}px`);
+      }
+    }
+    // The page itself must never scroll sideways; panes may.
+    if (doc.documentElement.scrollWidth > win.innerWidth + 1) {
+      bad.push(`${where}: the page scrolls sideways`);
+    }
+    // Content wider than its box *with nothing able to scroll it*. A long diff
+    // line inside a pane that scrolls is fine -- you can reach it; the same
+    // line with no scrolling ancestor is content you cannot get to.
+    const scrolls = (e) => {
+      for (let n = e.parentElement; n && n !== doc.body; n = n.parentElement) {
+        const x = win.getComputedStyle(n).overflowX;
+        if (x === "auto" || x === "scroll") return true;
+      }
+      return false;
+    };
+    for (const e of stage.querySelectorAll("*")) {
+      const r = e.getBoundingClientRect();
+      if (r.width > 0 && e.scrollWidth > r.width + 40
+          && win.getComputedStyle(e).overflowX === "visible"
+          && !(e instanceof win.SVGElement) && !scrolls(e)) {
+        bad.push(`${where}: ${e.className || e.tagName} runs ${Math.round(e.scrollWidth - r.width)}px past its box with nothing to scroll it`);
+        break;                       // one per view is enough to go and look
+      }
+    }
+    return bad;
+  }
+
+  async function run(width, height) {
+    frame.style.width = `${width}px`;
+    frame.style.height = `${height}px`;
+    frame.src = "/";
+    await new Promise(r => { frame.onload = r; });
+    await wait(3500);                       // boot, first fetches, first paint
+
+    const win = frame.contentWindow;
+    const state = await win.eval('import("/static/js/state.js")');
+    let problems = 0;
+
+    for (const layout of LAYOUTS) {
+      for (const view of VIEWS) {
+        state.setLayout(layout);
+        state.setView(view);
+        await wait(850);
+        const bad = faults(win, `${layout}/${view}`);
+        problems += bad.length;
+        if (bad.length) bad.forEach(b => line("bad", `${width}px`, b));
+      }
+    }
+    line(problems ? "bad" : "ok", `${width}×${height}`,
+         problems ? `${problems} problem(s) above`
+                  : `${LAYOUTS.length * VIEWS.length} view/layout combinations, nothing wrong`);
+    return problems;
+  }
+
+  async function all(widths) {
+    out.textContent = "";
+    sum.textContent = "running…";
+    let total = 0;
+    for (const [w, h] of widths) total += await run(w, h);
+    sum.textContent = total ? `${total} problem(s)` : "clean";
+    sum.className = total ? "bad" : "ok";
+  }
+
+  document.getElementById("go").onclick = () => all([[1280, 800]]);
+  document.getElementById("wide").onclick = () => all([[1280, 800], [1652, 900]]);
+</script>

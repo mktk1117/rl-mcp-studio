@@ -1,0 +1,13 @@
+# The build stage copies pyproject, setup.py, README, LICENSE and rlmcp_studio/
+# by name; this keeps everything else out of the context so a local artefact
+# cannot ride into the image and make a "fresh" install pass for the wrong
+# reason. Browser libraries fetched into a checkout are excluded too, so the
+# image always exercises the build-time download.
+*
+!pyproject.toml
+!setup.py
+!README.md
+!LICENSE
+!rlmcp_studio/
+rlmcp_studio/**/__pycache__/
+rlmcp_studio/web/vendor/
