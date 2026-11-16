@@ -1,7 +1,20 @@
-# rl-mcp-studio
+<h1 align="center">rl-mcp-studio</h1>
 
-**Watch, steer and record RL training runs from a browser, with an AI agent
-beside the run.**
+<p align="center">
+  <b>Watch, steer and record RL training runs from a browser,<br>with an AI agent beside the run.</b>
+</p>
+
+<p align="center">
+  <a href="https://github.com/mktk1117/rl-mcp-studio/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/mktk1117/rl-mcp-studio/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
+  <img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11%2B-blue.svg">
+  <a href="https://github.com/mktk1117/rl-mcp"><img alt="built on rl-mcp" src="https://img.shields.io/badge/built%20on-rl--mcp-6f42c1.svg"></a>
+</p>
+
+<picture>
+  <source media="(prefers-color-scheme: light)" srcset="docs/media/studio-light.png">
+  <img alt="The studio on a Go1 velocity run: a live frame of the robot, the run's hypothesis and headline metrics, and the agent panel reading the run after the push strength was doubled." src="docs/media/studio-dark.png">
+</picture>
 
 rl-mcp-studio is a local web app over [rl-mcp](https://github.com/mktk1117/rl-mcp).
 It reads your run records and the session directories of live training runs,
@@ -12,11 +25,67 @@ the run with rl-mcp's tools attached, and every conversation is kept with the
 run it was about. The backend imports `rlmcp` but never torch or a simulator,
 so starting or stopping the studio cannot disturb training.
 
-<!-- screenshot: a public demo task -->
-
 > **Experimental.** The studio works, but its interfaces are still changing
 > and it has not been released yet. If something breaks, please
 > [open an issue](https://github.com/mktk1117/rl-mcp-studio/issues).
+
+## A tour
+
+Every picture here comes from three short runs of mjlab's built-in
+`Mjlab-Velocity-Flat-Unitree-Go1` task: a baseline, then two attempts at
+making the walking policy cope with stronger pushes.
+
+### Watch it learn
+
+The trainer records a short clip on a schedule while it trains, so a run is
+a sequence of clips you can step through, not a number you wait on. Press **Look** for
+a frame now, or **Clip** for a few seconds of the current policy; the trainer
+renders it between rollout batches and never pauses to do it.
+
+<p align="center">
+  <img alt="Four clips of the Go1 from one run, at iterations 0, 100, 200 and 400: from stumbling to a steady trot." src="docs/media/learning.gif" width="720">
+</p>
+
+### Ask the agent beside the run
+
+The agent panel opens a conversation pinned to the run you are looking at,
+with rl-mcp's tools attached: it reads the metrics, takes frames, compares
+runs and writes notes to the run's log. In the screenshot above it was asked
+whether the robot copes with pushes doubled mid-run, read the metrics, and
+answered: still upright, but trading speed tracking for it. Conversations are
+kept with the run and survive a restart.
+
+### Steer a run while it trains
+
+Change any parameter the run reports (a reward weight, a push range, the
+learning rate) without stopping the trainer. Every change is stamped with the
+iteration it landed on, so the diff against the parent run shows what was
+different at launch *and* what was done to the run afterwards, beside what
+the agent said about it.
+
+<p align="center">
+  <img alt="The diff of run 002 against its parent: one launch field differs, and two push-range changes at iterations 621 and 622 are listed with the agent's remark." src="docs/media/steer.png">
+</p>
+
+### Every run is a record
+
+A run starts with a hypothesis, a prediction and a falsifier, and ends with a
+verdict, an outcome and the measurements that settle it. The records view
+lays a task's runs out as cards, as a graph of parents and warm starts, or as
+the recipe its ancestry folds into.
+
+<p align="center">
+  <img alt="The record card for run 003: a clip of the robot, the claim, the prediction, the outcome, and the measured values that falsified it." src="docs/media/record.png">
+</p>
+
+### Plots, without TensorBoard open
+
+The run's published metrics and every TensorBoard scalar, grouped, with
+smoothing, a filter and a large view for any chart.
+
+<p align="center">
+  <img alt="The Plots view: command ranges, episode metrics and per-term reward curves for a run." src="docs/media/plots.png">
+</p>
 
 ## Features
 
